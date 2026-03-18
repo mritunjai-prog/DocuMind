@@ -37,8 +37,9 @@ const RAGSection = () => {
               Ask Your <span className="text-gradient">Documents</span>
             </h2>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              Retrieval-Augmented Generation lets you query your entire document corpus 
-              in natural language. Get precise, cited answers backed by your own data.
+              Retrieval-Augmented Generation lets you query your entire document
+              corpus in natural language. Get precise, cited answers backed by
+              your own data.
             </p>
             <ul className="space-y-3">
               {[
@@ -47,7 +48,10 @@ const RAGSection = () => {
                 "Cross-document analysis and comparison",
                 "Multi-language query support",
               ].map((item) => (
-                <li key={item} className="flex items-center gap-3 text-sm text-muted-foreground">
+                <li
+                  key={item}
+                  className="flex items-center gap-3 text-sm text-muted-foreground"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-gradient-brand flex-shrink-0" />
                   {item}
                 </li>
@@ -59,29 +63,34 @@ const RAGSection = () => {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="glass-strong rounded-2xl glow-border overflow-hidden"
+            className="glass-card rounded-3xl glow-border overflow-hidden"
           >
             {/* Chat header */}
             <div className="px-5 py-3 border-b border-border/50 flex items-center gap-2">
               <Bot className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Document AI Assistant</span>
+              <span className="text-sm font-medium text-foreground">
+                Document AI Assistant
+              </span>
               <span className="ml-auto w-2 h-2 rounded-full bg-success animate-pulse" />
             </div>
 
             {/* Messages */}
             <div className="p-5 space-y-4 max-h-80 overflow-y-auto">
               {sampleConversation.map((msg, i) => (
-                <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+                <div
+                  key={i}
+                  className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
+                >
                   {msg.role === "assistant" && (
                     <div className="w-7 h-7 rounded-lg bg-gradient-brand flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Bot className="w-4 h-4 text-primary-foreground" />
                     </div>
                   )}
                   <div
-                    className={`rounded-xl px-4 py-2.5 text-sm max-w-[85%] leading-relaxed ${
+                    className={`rounded-2xl px-4 py-3 text-sm max-w-[85%] leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-secondary-foreground"
+                        ? "bg-gradient-brand text-primary-foreground"
+                        : "glass glow-border text-foreground"
                     }`}
                   >
                     {msg.text}
@@ -97,7 +106,7 @@ const RAGSection = () => {
 
             {/* Input */}
             <div className="px-5 py-3 border-t border-border/50">
-              <div className="flex items-center gap-2 glass rounded-lg px-4 py-2.5">
+              <div className="flex items-center gap-2 glass rounded-2xl px-4 py-3">
                 <input
                   type="text"
                   placeholder="Ask about your documents..."
@@ -105,9 +114,14 @@ const RAGSection = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 />
-                <button className="w-8 h-8 rounded-md bg-gradient-brand flex items-center justify-center flex-shrink-0 hover:shadow-[0_0_15px_-3px_hsl(var(--glow)/0.3)] transition-shadow">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-8 h-8 rounded-xl bg-gradient-brand flex items-center justify-center flex-shrink-0"
+                  style={{ boxShadow: "0 0 16px -3px hsl(var(--glow) / 0.4)" }}
+                >
                   <Send className="w-4 h-4 text-primary-foreground" />
-                </button>
+                </motion.button>
               </div>
             </div>
           </motion.div>

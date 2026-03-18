@@ -118,12 +118,14 @@ uvicorn app.main:app --reload
 ```
 
 **Expected output:**
+
 ```
 INFO:     Uvicorn running on http://127.0.0.1:8000
 INFO:     Application startup complete.
 ```
 
 **Test it:**
+
 - Visit http://localhost:8000 → Should see `{"message": "DocuMind API is running"}`
 - Visit http://localhost:8000/docs → Should see Swagger UI
 
@@ -134,19 +136,19 @@ Update your frontend to call the backend:
 Create `src/services/api.ts`:
 
 ```typescript
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const healthCheck = async () => {
-  const response = await api.get('/health');
+  const response = await api.get("/health");
   return response.data;
 };
 ```
@@ -164,6 +166,7 @@ git push origin main
 ## Day 1 Complete! 🎉
 
 You now have:
+
 - ✅ Backend running on http://localhost:8000
 - ✅ Frontend running on http://localhost:8080
 - ✅ API documentation at http://localhost:8000/docs
@@ -239,18 +242,22 @@ Week 8: Production          ░░░░░░░░░░░░░░ 0%
 ## Pro Tips
 
 ✨ **Keep both servers running:**
+
 - Frontend: http://localhost:8080
 - Backend: http://localhost:8000
 
 ✨ **Use separate terminals:**
+
 - Terminal 1: `npm run dev` (frontend)
 - Terminal 2: `uvicorn app.main:app --reload` (backend)
 
 ✨ **Test frequently:**
+
 - After each change, test the endpoint
 - Use Swagger UI (http://localhost:8000/docs)
 
 ✨ **Commit often:**
+
 - Commit after each working feature
 - Push to GitHub daily
 
@@ -259,6 +266,7 @@ Week 8: Production          ░░░░░░░░░░░░░░ 0%
 ## Questions?
 
 Check these files:
+
 - **Full roadmap:** [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md)
 - **Architecture:** [PROJECT2_PRD.md](./PROJECT2_PRD.md)
 - **GitHub:** https://github.com/mritunjai-prog/DocuMind

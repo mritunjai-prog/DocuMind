@@ -3,6 +3,7 @@
 ## 📍 CURRENT STATUS (What's Done)
 
 ### ✅ Completed (Week 0 - Frontend Foundation)
+
 ```
 ✓ Project setup and configuration
 ✓ React + TypeScript + Vite setup
@@ -23,6 +24,7 @@
 ```
 
 **Current Tech Stack:**
+
 - Frontend: React 18.2.0, TypeScript 5.2.2, Tailwind CSS 3.3.0
 - Components: shadcn/ui (50+ components ready)
 - State: Zustand, React Query
@@ -53,7 +55,7 @@
 
 ## 📐 SYSTEM ARCHITECTURE FLOWCHART
 
-```
+````
 ┌──────────────────────────────────────────────────────────────────────┐
 │                         USER UPLOADS DOCUMENT                         │
 │                    (PDF, Image, Scan, Handwritten)                   │
@@ -242,7 +244,7 @@
 │  │ • Download results (JSON/CSV/PDF)                          │     │
 │  └────────────────────────────────────────────────────────────┘     │
 └──────────────────────────────────────────────────────────────────────┘
-```
+````
 
 ---
 
@@ -253,6 +255,7 @@
 #### Week 1: Backend Foundation
 
 **Day 1-2: FastAPI Setup**
+
 ```bash
 Tasks:
 1. Create backend directory structure
@@ -280,6 +283,7 @@ Tasks:
 **Deliverable:** FastAPI server running on localhost:8000
 
 **Day 3-4: Database Setup**
+
 ```bash
 Tasks:
 1. Install PostgreSQL locally or use Docker
@@ -306,6 +310,7 @@ Tasks:
 **Deliverable:** PostgreSQL + Redis running, database tables created
 
 **Day 5-7: Document Upload API**
+
 ```python
 Tasks:
 1. Create upload endpoint
@@ -344,6 +349,7 @@ Tasks:
 **Deliverable:** Working file upload with cloud storage
 
 #### Week 2: Testing & Polish
+
 - Unit tests for upload endpoint
 - Error handling
 - API documentation (Swagger)
@@ -354,6 +360,7 @@ Tasks:
 ### 🟢 PHASE 2: OCR Pipeline (Week 3)
 
 **Day 1-2: Tesseract Setup**
+
 ```bash
 Tasks:
 1. Install Tesseract
@@ -372,6 +379,7 @@ Tasks:
 ```
 
 **Day 3-5: Image Preprocessing**
+
 ```python
 Implement:
 1. PDF to Image conversion
@@ -384,6 +392,7 @@ Test with 50+ sample documents
 ```
 
 **Day 6-7: OCR Extraction**
+
 ```python
 Implement:
 1. Text extraction with Tesseract
@@ -402,6 +411,7 @@ Test accuracy on various document types
 ### 🟡 PHASE 3: Classification + NER (Week 4)
 
 **Day 1-3: Document Classification**
+
 ```python
 Tasks:
 1. Download pre-trained model
@@ -422,6 +432,7 @@ Optional: Fine-tune model on your data
 ```
 
 **Day 4-7: NER Implementation**
+
 ```python
 Tasks:
 1. Install models
@@ -452,6 +463,7 @@ Tasks:
 ### 🟣 PHASE 4: Validation + Anomaly Detection (Week 5)
 
 **Day 1-3: Data Validation**
+
 ```python
 Tasks:
 1. Create validator service
@@ -467,6 +479,7 @@ Tasks:
 ```
 
 **Day 4-7: Anomaly Detection**
+
 ```python
 Tasks:
 1. Statistical analysis
@@ -495,6 +508,7 @@ Tasks:
 ### 🔴 PHASE 5: RAG System (Week 6)
 
 **Day 1-2: Vector Database Setup**
+
 ```python
 Tasks:
 1. Choose vector DB
@@ -512,6 +526,7 @@ Tasks:
 ```
 
 **Day 3-5: Document Ingestion**
+
 ```python
 Tasks:
 1. Install LangChain
@@ -532,6 +547,7 @@ Tasks:
 ```
 
 **Day 6-7: Q&A Implementation**
+
 ```python
 Tasks:
 1. Create Q&A endpoint
@@ -562,6 +578,7 @@ Tasks:
 ### 🟠 PHASE 6: Dashboard + Frontend Integration (Week 7)
 
 **Day 1-3: Upload Interface**
+
 ```typescript
 Tasks:
 1. Create upload page
@@ -583,6 +600,7 @@ Tasks:
 ```
 
 **Day 4-5: Results Display**
+
 ```typescript
 Tasks:
 1. Create results page
@@ -602,6 +620,7 @@ Tasks:
 ```
 
 **Day 6-7: Dashboard**
+
 ```typescript
 Tasks:
 1. Create dashboard page
@@ -626,6 +645,7 @@ Tasks:
 ### ⚫ PHASE 7: Production Ready (Week 8)
 
 **Day 1-2: Testing**
+
 ```bash
 Tasks:
 1. Unit tests (backend)
@@ -645,6 +665,7 @@ Tasks:
 ```
 
 **Day 3-4: Dockerization**
+
 ```dockerfile
 Tasks:
 1. Create Dockerfile for backend
@@ -661,6 +682,7 @@ Tasks:
 ```
 
 **Day 5-6: Deployment**
+
 ```bash
 Tasks:
 1. Choose cloud provider (AWS/GCP/Azure)
@@ -683,6 +705,7 @@ Tasks:
 ```
 
 **Day 7: Launch**
+
 ```bash
 Tasks:
 1. Final testing
@@ -699,6 +722,7 @@ Tasks:
 ### Choose Your Stack:
 
 **Vector Database:**
+
 ```
 Option A: Pinecone ⭐ (Recommended)
 - Pros: Managed, fast, easy setup
@@ -712,6 +736,7 @@ Option B: Qdrant
 ```
 
 **Cloud Storage:**
+
 ```
 Option A: AWS S3 ⭐ (Recommended)
 - Industry standard
@@ -727,6 +752,7 @@ Option C: Local filesystem
 ```
 
 **LLM Provider:**
+
 ```
 Option A: OpenAI GPT-4 ⭐
 - Best quality
@@ -811,6 +837,7 @@ git push origin feature/document-upload
 ### Common Issues:
 
 **1. OCR Accuracy Too Low**
+
 ```
 Solution:
 - Improve image preprocessing
@@ -819,6 +846,7 @@ Solution:
 ```
 
 **2. High OpenAI API Costs**
+
 ```
 Solution:
 - Cache embeddings
@@ -827,6 +855,7 @@ Solution:
 ```
 
 **3. Slow Processing**
+
 ```
 Solution:
 - Add more Celery workers
@@ -836,6 +865,7 @@ Solution:
 ```
 
 **4. Complex Deployment**
+
 ```
 Solution:
 - Start with simple deployment (single server)
@@ -850,18 +880,23 @@ Solution:
 ### If you get stuck:
 
 **FastAPI:**
+
 - https://fastapi.tiangolo.com/tutorial/
 
 **LangChain + RAG:**
+
 - https://python.langchain.com/docs/use_cases/question_answering/
 
 **OCR:**
+
 - https://tesseract-ocr.github.io/
 
 **Transformers:**
+
 - https://huggingface.co/docs/transformers/
 
 **Docker:**
+
 - https://docs.docker.com/get-started/
 
 ---
@@ -872,6 +907,7 @@ Copy this for each week:
 
 ```markdown
 ### Week 1 Tasks:
+
 - [ ] FastAPI app running
 - [ ] PostgreSQL connected
 - [ ] Redis connected
@@ -882,6 +918,7 @@ Copy this for each week:
 - [ ] Tests written
 
 ### Week 2 Tasks:
+
 ...
 ```
 
@@ -898,6 +935,7 @@ Copy this for each week:
 **Start with Week 1, Day 1 tomorrow!**
 
 The key is to build incrementally:
+
 1. Don't skip steps
 2. Test each component before moving on
 3. Commit code daily

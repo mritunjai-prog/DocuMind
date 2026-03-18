@@ -1,5 +1,11 @@
 import { motion } from "framer-motion";
-import { Building2, Scale, Stethoscope, Receipt, Calculator } from "lucide-react";
+import {
+  Building2,
+  Scale,
+  Stethoscope,
+  Receipt,
+  Calculator,
+} from "lucide-react";
 
 const industries = [
   { icon: Building2, label: "Finance", desc: "Invoice & payment processing" },
@@ -24,27 +30,37 @@ const CTASection = () => {
             Built for <span className="text-gradient">Every Industry</span>
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto mb-12">
-            Pre-configured templates and extraction models for the most demanding document workflows.
+            Pre-configured templates and extraction models for the most
+            demanding document workflows.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             {industries.map((ind) => (
-              <div key={ind.label} className="glass rounded-xl px-6 py-4 glow-border glow-border-hover transition-all flex items-center gap-3 cursor-default">
+              <motion.div
+                key={ind.label}
+                whileHover={{ scale: 1.05, y: -3 }}
+                className="glass-card rounded-2xl px-6 py-4 glow-border glow-border-hover transition-all flex items-center gap-3 cursor-default"
+              >
                 <ind.icon className="w-5 h-5 text-primary" />
                 <div className="text-left">
-                  <div className="font-semibold text-foreground text-sm">{ind.label}</div>
-                  <div className="text-xs text-muted-foreground">{ind.desc}</div>
+                  <div className="font-semibold text-foreground text-sm">
+                    {ind.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {ind.desc}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>
 
         {/* Final CTA */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="glass-strong rounded-3xl glow-border p-12 text-center relative overflow-hidden"
+          transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+          className="glass-card rounded-[2.5rem] glow-strong p-14 text-center relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-brand opacity-[0.03]" />
           <div className="relative z-10">
@@ -52,15 +68,25 @@ const CTASection = () => {
               Ready to Automate Your Document Workflow?
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-              Reduce manual data entry by 90% and process documents with enterprise-grade accuracy.
+              Reduce manual data entry by 90% and process documents with
+              enterprise-grade accuracy.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="px-8 py-3.5 rounded-lg bg-gradient-brand text-primary-foreground font-semibold hover:shadow-[0_0_30px_-5px_hsl(var(--glow)/0.4)] transition-all">
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="btn-smooth px-8 py-4 rounded-2xl bg-gradient-brand text-primary-foreground font-bold flex items-center gap-2"
+                style={{ boxShadow: "0 8px 32px -6px hsl(var(--glow) / 0.5)" }}
+              >
                 Request Demo
-              </button>
-              <button className="px-8 py-3.5 rounded-lg glass glow-border glow-border-hover font-semibold text-foreground transition-all">
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-8 py-4 rounded-2xl glass glow-border glow-border-hover font-bold text-foreground transition-all"
+              >
                 View API Docs
-              </button>
+              </motion.button>
             </div>
           </div>
         </motion.div>
@@ -68,7 +94,8 @@ const CTASection = () => {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-border/30 text-center">
           <p className="text-sm text-muted-foreground">
-            © 2026 DocuMind AI — Intelligent Document Processing. All rights reserved.
+            © 2026 DocuMind AI — Intelligent Document Processing. All rights
+            reserved.
           </p>
         </div>
       </div>

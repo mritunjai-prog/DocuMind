@@ -1,0 +1,442 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Upload,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  ArrowRight,
+  MessageSquare,
+  Search,
+  Bot,
+} from "lucide-react";
+import axios from "axios";
+
+export const DocumentUpload = () => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [result, setResult] = useState<any>(null);
+
+  // Interactive features state
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<
+    "summary" | "ocr" | "ner" | "chat"
+  >("summary");
+  const [chatQuery, setChatQuery] = useState("");
+  const [chatHistory, setChatHistory] = useState<
+    { role: string; text: string }[]
+  >([]);
+  const [isChatting, setIsChatting] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setUploadStatus("idle");
+      setResult(null);
+      setAnalysisData(null);
+      setChatHistory([]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadStatus("idle");
+
+    const formData = new FormData();
+    formData.append("files", file); // Must match the backend's 'files' parameter
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      // Backend returns an array, take the first result
+      setResult(response.data[0]);
+      setUploadStatus("success");
+
+      // Auto-fetch analysis data after upload
+      fetchAnalysis(response.data[0].request_id);
+    } catch (error) {
+      console.error("Upload failed", error);
+      setUploadStatus("error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const fetchAnalysis = async (docId: string) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:8000/api/v1/documents/${docId}/analysis`,
+      );
+      setAnalysisData(res.data);
+    } catch (err) {
+      console.error("Analysis fetch failed", err);
+    }
+  };
+
+  const handleChat = async () => {
+    if (!chatQuery.trim() || !result?.request_id) return;
+
+    const query = chatQuery;
+    setChatQuery("");
+    setChatHistory((prev) => [...prev, { role: "user", text: query }]);
+    setIsChatting(true);
+
+    try {
+      const res = await axios.post(
+        `http://localhost:8000/api/v1/documents/${result.request_id}/query`,
+        {
+          query: query,
+        },
+      );
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "bot", text: res.data.answer },
+      ]);
+    } catch (err) {
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: "Sorry, I encountered an error connecting to the RAG engine.",
+        },
+      ]);
+    } finally {
+      setIsChatting(false);
+    }
+  };
+
+  return (
+    <section className="relative overflow-hidden w-full">
+      <div className="w-full relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="glass-card rounded-3xl p-8 glow-border"
+        >
+          {uploadStatus !== "success" && (
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-primary/30 rounded-2xl p-10 bg-primary/5 hover:bg-primary/10 transition-colors">
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.png,.jpg,.jpeg"
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer flex flex-col items-center justify-center w-full"
+              >
+                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                  <Upload className="w-8 h-8 text-primary" />
+                </div>
+                <span className="text-lg font-semibold text-foreground mb-2">
+                  Click to upload or drag and drop
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  PDF, PNG, JPG (max. 10MB)
+                </span>
+              </label>
+
+              {file && (
+                <div className="mt-8 flex flex-col items-center w-full">
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-background w-full max-w-md border border-border">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <span className="text-sm font-medium truncate flex-1">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className="mt-6 px-8 py-3 rounded-full bg-primary text-primary-foreground font-semibold flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        Upload & Process
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results Area */}
+          {uploadStatus === "success" && result && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 p-6 rounded-2xl bg-success/10 border border-success/30"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <CheckCircle2 className="w-6 h-6 text-success" />
+                <h3 className="text-lg font-bold text-success">
+                  Upload Complete
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Document ID
+                  </p>
+                  <p className="font-mono text-sm">{result.request_id}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    File Name
+                  </p>
+                  <p className="font-medium text-sm truncate">
+                    {result.filename}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <p className="font-medium text-sm text-primary flex items-center gap-2">
+                    {analysisData?.status === "completed" ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-success" />{" "}
+                        completed
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                        {(result.status || "processing").toLowerCase()}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Status Code
+                  </p>
+                  <p className="font-mono text-sm truncate">200 OK</p>
+                </div>
+              </div>
+
+              {/* Interactive Tabs */}
+              {analysisData && (
+                <div className="mt-8 border-t border-border/50 pt-6">
+                  <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
+                    {["summary", "ocr", "ner", "chat"].map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => {
+                          setActiveTab(tab as any);
+                          if (
+                            result?.request_id &&
+                            analysisData?.status !== "completed"
+                          ) {
+                            fetchAnalysis(result.request_id);
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${
+                          activeTab === tab
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground hover:bg-primary/20"
+                        }`}
+                      >
+                        {tab.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="bg-background/80 rounded-2xl p-6 border border-border min-h-[300px]"
+                    >
+                      {activeTab === "summary" && (
+                        <div>
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <Bot className="w-5 h-5 text-primary" />
+                            AI Document Summary
+                          </h4>
+                          <p className="text-muted-foreground leading-relaxed">
+                            {analysisData.summary}
+                          </p>
+                        </div>
+                      )}
+
+                      {activeTab === "ocr" && (
+                        <div>
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-primary" />
+                            Extracted Text (OCR)
+                          </h4>
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono p-4 bg-muted/30 rounded-xl overflow-auto max-h-[400px]">
+                            {analysisData.ocr_text}
+                          </pre>
+                        </div>
+                      )}
+
+                      {activeTab === "ner" && (
+                        <div>
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <Search className="w-5 h-5 text-primary" />
+                            Named Entity Recognition (NER)
+                          </h4>
+                          <div className="flex flex-wrap gap-3">
+                            {analysisData.entities.map(
+                              (ent: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="flex flex-col bg-muted/40 p-3 rounded-lg border border-border"
+                                >
+                                  <span className="text-xs font-bold text-primary mb-1 uppercase">
+                                    {ent.label}
+                                  </span>
+                                  <span className="text-sm font-medium">
+                                    {ent.text}
+                                  </span>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeTab === "chat" && (
+                        <div className="flex flex-col h-full min-h-[350px]">
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-primary" />
+                            Ask the Document (RAG)
+                          </h4>
+
+                          <div className="flex-1 bg-muted/20 rounded-xl p-4 mb-4 overflow-y-auto max-h-[300px] flex flex-col gap-4">
+                            {chatHistory.length === 0 ? (
+                              <div className="m-auto text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
+                                <Bot className="w-8 h-8 opacity-50" />
+                                <p>Ask any question about this document.</p>
+                                <p className="text-xs opacity-70">
+                                  Example: "What is the total amount?"
+                                </p>
+                              </div>
+                            ) : (
+                              chatHistory.map((msg, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-[80%] p-3 rounded-xl text-sm ${
+                                      msg.role === "user"
+                                        ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                        : "bg-secondary text-secondary-foreground rounded-tl-sm"
+                                    }`}
+                                  >
+                                    {msg.text}
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                            {isChatting && (
+                              <div className="flex justify-start">
+                                <div className="bg-secondary p-3 rounded-xl rounded-tl-sm text-sm flex items-center gap-2">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Thinking...
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={chatQuery}
+                              onChange={(e) => setChatQuery(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && handleChat()
+                              }
+                              placeholder="Ask a question..."
+                              className="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            />
+                            <button
+                              onClick={handleChat}
+                              disabled={isChatting || !chatQuery.trim()}
+                              className="bg-primary hover:opacity-90 text-primary-foreground p-3 rounded-xl transition-opacity disabled:opacity-50"
+                            >
+                              <ArrowRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {uploadStatus === "success" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 flex justify-center"
+            >
+              <button
+                onClick={() => {
+                  setFile(null);
+                  setUploadStatus("idle");
+                  setResult(null);
+                  setAnalysisData(null);
+                  setChatHistory([]);
+                  setActiveTab("summary");
+                }}
+                className="px-6 py-2 rounded-full border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors"
+                title="Upload another document"
+              >
+                Upload New Document
+              </button>
+            </motion.div>
+          )}
+
+          {uploadStatus === "error" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 p-6 rounded-2xl bg-destructive/10 border border-destructive/30"
+            >
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-destructive" />
+                <p className="text-destructive font-medium">
+                  Failed to process document. Please try again.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+export default DocumentUpload;
