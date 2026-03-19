@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DocumentUpload from "@/components/DocumentUpload";
 import DashboardPreview from "@/components/DashboardPreview";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,6 +6,18 @@ import { Preloader } from "@/components/Preloader";
 
 const Workspace = () => {
   const [loading, setLoading] = useState(true);
+  const [selectedDoc, setSelectedDoc] = useState<{
+    request_id: string;
+    filename: string;
+  } | null>(null);
+  const uploadRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenDocument = (doc: any) => {
+    setSelectedDoc({ request_id: doc.id, filename: doc.filename });
+    if (uploadRef.current) {
+      uploadRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
     <>
@@ -41,14 +53,14 @@ const Workspace = () => {
           </div>
 
           {/* Upload Component */}
-          <div className="mb-12">
+          <div className="mb-12" ref={uploadRef}>
             {/* We reuse the DocumentUpload component but it shouldn't contain the "Try DocuMind Now" title inside it. */}
-            <DocumentUpload />
+            <DocumentUpload initialDocument={selectedDoc} />
           </div>
 
           {/* Dashboard Component */}
           <div>
-            <DashboardPreview />
+            <DashboardPreview onOpenDocument={handleOpenDocument} />
           </div>
         </div>
       </motion.div>

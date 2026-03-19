@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   TrendingUp,
   Clock,
@@ -6,6 +8,7 @@ import {
   AlertTriangle,
   Download,
   MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 
 const metrics = [
@@ -39,40 +42,40 @@ const metrics = [
   },
 ];
 
-const recentDocs = [
-  {
-    name: "invoice_001.pdf",
-    type: "Invoice",
-    status: "✅ Complete",
-    confidence: "99.8%",
-  },
-  {
-    name: "contract_renewal.pdf",
-    type: "Contract",
-    status: "⚠️ Review Needed",
-    confidence: "97.2%",
-  },
-  {
-    name: "receipt.jpg",
-    type: "Receipt",
-    status: "⏳ Processing",
-    confidence: "—",
-  },
-  {
-    name: "medical_record_anon.pdf",
-    type: "Medical",
-    status: "✅ Complete",
-    confidence: "98.5%",
-  },
-];
-
 const statusColor: Record<string, string> = {
-  "✅ Complete": "text-success",
-  "⚠️ Review Needed": "text-warning",
-  "⏳ Processing": "text-primary",
+  completed: "text-success",
+  failed: "text-destructive",
+  processing: "text-primary",
 };
 
-const DashboardPreview = () => {
+interface DashboardPreviewProps {
+  onOpenDocument?: (doc: any) => void;
+}
+
+const DashboardPreview: React.FC<DashboardPreviewProps> = ({
+  onOpenDocument,
+}) => {
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  const fetchDocuments = async () => {
+    setLoadingDocs(true);
+    try {
+      const res = await axios.get(
+        "http://localhost:8000/api/v1/documents?user_id=guest_user",
+      );
+      setDocuments(res.data);
+    } catch (error) {
+      console.error("Failed to fetch documents", error);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
   return (
     <section className="py-28 relative overflow-hidden">
       <div
@@ -159,9 +162,19 @@ const DashboardPreview = () => {
             <h3 className="font-semibold text-foreground flex items-center gap-2">
               📊 My Documents
               <span className="text-xs font-normal text-muted-foreground ml-2">
-                (23 processed this month)
+                ({documents.length} processed)
               </span>
             </h3>
+            <button
+              onClick={fetchDocuments}
+              disabled={loadingDocs}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loadingDocs ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -179,9 +192,9 @@ const DashboardPreview = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentDocs.map((doc) => (
+                {documents.map((doc) => (
                   <tr
-                    key={doc.name}
+                    key={doc.id}
                     className="border-b border-border/20 hover:bg-primary/5 transition-colors group"
                   >
                     <td className="py-4 px-6">
@@ -191,30 +204,38 @@ const DashboardPreview = () => {
                         </div>
                         <div>
                           <p className="font-mono text-foreground font-medium">
-                            {doc.name}
+                            {doc.filename}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {doc.type}
+                          <p className="text-xs text-muted-foreground flex gap-2">
+                            <span>ID: {doc.id.substring(0, 8)}...</span>
+                            <span>
+                              {new Date(doc.created_at).toLocaleString()}
+                            </span>
                           </p>
                         </div>
                       </div>
                     </td>
                     <td
-                      className={`py-4 px-6 font-medium ${statusColor[doc.status]}`}
+                      className={`py-4 px-6 font-medium capitalize ${statusColor[doc.status] || "text-foreground"}`}
                     >
                       {doc.status}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {doc.status !== "⏳ Processing" ? (
+                        {doc.status !== "processing" ? (
                           <>
                             <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-medium transition-colors">
                               <Download className="w-3.5 h-3.5" />
                               Download
                             </button>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium transition-colors">
+                            <button
+                              onClick={() =>
+                                onOpenDocument && onOpenDocument(doc)
+                              }
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 text-xs font-medium transition-colors"
+                            >
                               <MessageSquare className="w-3.5 h-3.5" />
-                              Ask
+                              View / Ask
                             </button>
                           </>
                         ) : (
@@ -227,6 +248,16 @@ const DashboardPreview = () => {
                     </td>
                   </tr>
                 ))}
+                {documents.length === 0 && !loadingDocs && (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      No documents uploaded yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer
+from sqlalchemy import Column, String, DateTime, Integer, Text
 from datetime import datetime
 from app.core.database import Base
 
@@ -14,3 +14,6 @@ class Document(Base):
     status = Column(String, default="uploaded")  # queued, processing, completed, failed
     created_at = Column(DateTime, default=datetime.now)
     completed_at = Column(DateTime, nullable=True)
+    summary = Column(Text, nullable=True)
+    entities = Column(Text, nullable=True)  # Store JSON array string here
+    extracted_text = Column(Text, nullable=True)  # Store the raw OCR/PDF extracted text

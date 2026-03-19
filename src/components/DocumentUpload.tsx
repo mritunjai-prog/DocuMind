@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-export const DocumentUpload = () => {
+interface DocumentUploadProps {
+  initialDocument?: { request_id: string; filename: string } | null;
+}
+
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({
+  initialDocument,
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<
@@ -31,6 +37,15 @@ export const DocumentUpload = () => {
     { role: string; text: string }[]
   >([]);
   const [isChatting, setIsChatting] = useState(false);
+
+  useEffect(() => {
+    if (initialDocument) {
+      setFile(null);
+      setResult(initialDocument);
+      setUploadStatus("success");
+      fetchAnalysis(initialDocument.request_id);
+    }
+  }, [initialDocument]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

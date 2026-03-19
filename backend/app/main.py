@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.database import engine, Base
+from app.models import document  # Ensure models are loaded before creating tables
+
+# Create all tables in the database (SQLAlchemy)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Intelligent Document Processing API",

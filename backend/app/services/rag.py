@@ -6,7 +6,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.documents import Document
 from dotenv import load_dotenv
+
+from .ocr import OCREngine
 
 load_dotenv()
 
@@ -23,12 +26,26 @@ class DocumentRAG:
         if file_path.lower().endswith(".pdf"):
             loader = PyPDFLoader(file_path)
             docs = loader.load()
+        elif file_path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
+            print(f"Image format detected. Extracting text via OCR: {file_path}")
+            ocr_engine = OCREngine()
+            ocr_text = ocr_engine.extract_text(file_path)["text"]
+            docs = [
+                Document(
+                    page_content=(
+                        ocr_text
+                        if ocr_text.strip()
+                        else "No text could be extracted from this image."
+                    ),
+                    metadata={"source": file_path},
+                )
+            ]
         else:
             loader = TextLoader(file_path, encoding="utf-8")
             try:
                 docs = loader.load()
             except Exception:
-                docs = [{"page_content": "Could not read this file type locally."}]
+                docs = [Document(page_content="Could not read this file type locally.", metadata={"source": file_path})]
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200
@@ -123,7 +140,7 @@ class DocumentRAG:
             )
 
             ner_prompt = (
-                "Extract 3-5 named entities (people, organizations, locations, specialized concepts) from the following text. "
+                "Extract ALL significant named entities (such as PEOPLE, ORGANIZATIONS, LOCATIONS, DATES, AMOUNTS, EMAILS, PHONE NUMBERS, and SPECIALIZED_CONCEPTS) from the following text. Do not limit to just 3-5, provide as many relevant entities as you can find. "
                 "Format the response EXACTLY as a list of 'LABEL: Entity text' with one per line. Do not include asterisks or bolding.\n\n"
                 f"{full_text}\n\n"
                 "Entities:"
@@ -163,3 +180,6 @@ class DocumentRAG:
                 "entities": [],
                 "summary": f"Could not generate summary due to an error: {str(e)}",
             }
+
+
+
