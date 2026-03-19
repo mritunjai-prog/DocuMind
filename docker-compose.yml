@@ -17,5 +17,33 @@ services:
     ports:
       - "6379:6379"
 
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: documind_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/idp_db
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./backend/storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: documind_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:

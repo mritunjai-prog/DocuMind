@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.env
+.git
+.gitignore
+*.log
+backend/venv/
+backend/__pycache__/
+backend/local_test.db
+backend/storage/

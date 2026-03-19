@@ -87,7 +87,7 @@ const HeroSection = () => {
       >
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           {/* Left Text Content */}
-          <div className="text-left text-center lg:text-left z-20">
+          <div className="text-center lg:text-left z-20">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
