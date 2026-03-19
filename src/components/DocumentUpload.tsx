@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Search,
   Bot,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 
@@ -30,7 +31,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   // Interactive features state
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "summary" | "ocr" | "ner" | "chat"
+    "summary" | "ocr" | "ner" | "chat" | "anomalies"
   >("summary");
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState<
@@ -257,7 +258,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
               {analysisData && (
                 <div className="mt-8 border-t border-border/50 pt-6">
                   <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-                    {["summary", "ocr", "ner", "chat"].map((tab) => (
+                    {["summary", "ocr", "ner", "anomalies", "chat"].map((tab) => (
                       <button
                         key={tab}
                         onClick={() => {
@@ -338,7 +339,48 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                           </div>
                         </div>
                       )}
-
+                        {activeTab === "anomalies" && (
+                          <div>
+                            <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                              <AlertTriangle className="w-5 h-5 text-warning" />
+                              Validation & Anomalies
+                            </h4>
+                            <div className="flex flex-col gap-3">
+                              {analysisData.anomalies && analysisData.anomalies.length > 0 ? (
+                                analysisData.anomalies.map((anom: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className={`flex p-4 rounded-lg border items-start gap-3 ${
+                                      anom.severity === "high"
+                                        ? "bg-destructive/10 border-destructive text-destructive"
+                                        : anom.severity === "medium"
+                                        ? "bg-warning/10 border-warning text-warning"
+                                        : "bg-muted/40 border-border"
+                                    }`}
+                                  >
+                                    <AlertTriangle className={`w-5 h-5 mt-0.5 ${
+                                      anom.severity === "high" ? "text-destructive" :
+                                      anom.severity === "medium" ? "text-warning" : "text-muted-foreground"
+                                    }`} />
+                                    <div>
+                                      <span className="text-xs font-bold mb-1 uppercase opacity-70 block">
+                                        {anom.type.replace(/_/g, " ")}
+                                      </span>
+                                      <span className="text-sm font-medium">
+                                        {anom.message}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-muted-foreground flex items-center gap-2">
+                                  <CheckCircle2 className="w-5 h-5 text-success" />
+                                  No anomalies or validation errors detected! 
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       {activeTab === "chat" && (
                         <div className="flex flex-col h-full min-h-[350px]">
                           <h4 className="text-lg font-bold mb-4 flex items-center gap-2">

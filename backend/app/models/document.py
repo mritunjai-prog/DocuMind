@@ -18,3 +18,4 @@ class Document(Base):
     entities = Column(Text, nullable=True)  # Store JSON array string here
     extracted_text = Column(Text, nullable=True)  # Store the raw OCR/PDF extracted text
     document_type = Column(String, nullable=True)  # Auto-classification result
+    anomalies = Column(Text, nullable=True)  # Store JSON array of warnings/anomalies

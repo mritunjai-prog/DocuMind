@@ -50,7 +50,9 @@ The Intelligent Document Processing System is a sophisticated platform that auto
 - **Status:** Complete ?
 
 ### Phase 5: Data Validation and Anomaly Detection (Week 5)
-- **Status:** Pending
+- DocumentValidator layer enforcing business logic, required schema fields structure, and detecting statistical anomalies in amounts or dates based on extracted entities output.
+- Custom Frontend view for Warning triggers.
+- **Status:** Complete ?
 
 ### Phase 6: RAG Implementation and Query Modules (Week 6)
 - **Status:** Complete ?
@@ -66,9 +68,9 @@ The Intelligent Document Processing System is a sophisticated platform that auto
 
 ## 4. Current Progress Status
 
-We have fully completed **Phase 4** by utilizing conversational AI prompt engineering to bypass rigid statistical tagging constraints. The backend now accurately processes high-fidelity dynamic tagging (Classification) and exhaustive field extraction (NER). The frontend successfully polls and routes these results into user-facing Data Tables and Interactive Grids. 
+We have fully completed **Phase 4** and **Phase 5**. The backend now accurately processes high-fidelity dynamic tagging (Classification) and exhaustive field extraction (NER). It passes these structural tags to a rule-based validation module capable of flagging statistical anomalies (unusually high amounts, missing fields, format errors). 
 
-Next priority is **Phase 5**: Data Validation and Anomaly Detection.
+Next priority is **Phase 8**: Deployment and System Optimization (since RAG/Phase 6 and UI/Phase 7 were already completed iteratively earlier in the build).
 
 </div>
 

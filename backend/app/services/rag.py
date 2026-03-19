@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from dotenv import load_dotenv
 
 from .ocr import OCREngine
+from .validator import DocumentValidator
 
 load_dotenv()
 
@@ -183,6 +184,9 @@ class DocumentRAG:
             )
             document_type = classification_response.content.strip().strip("*")
 
+            # Phase 5: Anomaly Detection Validation
+            anomalies = DocumentValidator.validate(document_type, entities)
+
             return {
                 "document_id": document_id,
                 "status": "completed",
@@ -190,6 +194,7 @@ class DocumentRAG:
                 "entities": entities,
                 "summary": summary,
                 "document_type": document_type,
+                "anomalies": anomalies,
             }
         except Exception as e:
             return {
