@@ -34,6 +34,7 @@ def background_process_document(doc_id: str, file_path: str):
                 doc.summary = analysis.get("summary")
                 doc.entities = json.dumps(analysis.get("entities", []))
                 doc.extracted_text = analysis.get("ocr_text", "No text extracted.")
+                doc.document_type = analysis.get("document_type", "Unknown")
                 doc.completed_at = datetime.now()
             else:
                 doc.status = "failed"
@@ -140,6 +141,7 @@ def get_all_documents(user_id: str = "guest_user", db: Session = Depends(get_db)
                 "id": doc.id,
                 "filename": doc.filename,
                 "status": doc.status,
+                "document_type": doc.document_type or "Unknown",
                 "created_at": doc.created_at,
                 "completed_at": doc.completed_at,
             }
@@ -169,6 +171,7 @@ def get_document_analysis(document_id: str, db: Session = Depends(get_db)):
             "ocr_text": doc.extracted_text or "No text was extracted.",
             "entities": entities,
             "summary": doc.summary or "Summary not available.",
+            "document_type": doc.document_type or "Unknown",
         }
     else:
         # Still processing or failed
@@ -178,6 +181,7 @@ def get_document_analysis(document_id: str, db: Session = Depends(get_db)):
             "ocr_text": "...",
             "entities": [],
             "summary": doc.status.capitalize() + "...",
+            "document_type": "...",
         }
 
 

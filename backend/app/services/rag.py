@@ -45,7 +45,12 @@ class DocumentRAG:
             try:
                 docs = loader.load()
             except Exception:
-                docs = [Document(page_content="Could not read this file type locally.", metadata={"source": file_path})]
+                docs = [
+                    Document(
+                        page_content="Could not read this file type locally.",
+                        metadata={"source": file_path},
+                    )
+                ]
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200
@@ -146,6 +151,14 @@ class DocumentRAG:
                 "Entities:"
             )
 
+            classification_prompt = (
+                "Analyze the following text and categorize this document into exactly one of these types: "
+                "Invoice, Contract, Receipt, Medical Record, Tax Form, Insurance, Purchase Order, Bank Statement, or Other. "
+                "Respond with ONLY the category name. Do not include any other text.\n\n"
+                f"{full_text}\n\n"
+                "Category:"
+            )
+
             response = llm.invoke([HumanMessage(content=prompt)])
             summary = response.content
 
@@ -165,12 +178,18 @@ class DocumentRAG:
             if not entities:
                 entities = [{"label": "INFO", "text": "Extracted via Gemini"}]
 
+            classification_response = llm.invoke(
+                [HumanMessage(content=classification_prompt)]
+            )
+            document_type = classification_response.content.strip().strip("*")
+
             return {
                 "document_id": document_id,
                 "status": "completed",
                 "ocr_text": full_text,
                 "entities": entities,
                 "summary": summary,
+                "document_type": document_type,
             }
         except Exception as e:
             return {
@@ -180,6 +199,3 @@ class DocumentRAG:
                 "entities": [],
                 "summary": f"Could not generate summary due to an error: {str(e)}",
             }
-
-
-

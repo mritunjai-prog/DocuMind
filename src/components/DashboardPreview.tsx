@@ -184,6 +184,9 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                     Uploaded Document
                   </th>
                   <th className="text-left py-4 px-6 text-muted-foreground font-semibold">
+                    Type
+                  </th>
+                  <th className="text-left py-4 px-6 text-muted-foreground font-semibold">
                     Status
                   </th>
                   <th className="text-right py-4 px-6 text-muted-foreground font-semibold">
@@ -214,6 +217,11 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                           </p>
                         </div>
                       </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="px-2.5 py-1 rounded-md bg-accent/10 text-accent text-xs font-semibold capitalize border border-accent/20">
+                        {doc.document_type || "Unknown"}
+                      </span>
                     </td>
                     <td
                       className={`py-4 px-6 font-medium capitalize ${statusColor[doc.status] || "text-foreground"}`}
