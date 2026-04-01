@@ -45,6 +45,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       setResult(initialDocument);
       setUploadStatus("success");
       fetchAnalysis(initialDocument.request_id);
+      setActiveTab("chat");
     }
   }, [initialDocument]);
 
@@ -67,9 +68,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     const formData = new FormData();
     formData.append("files", file); // Must match the backend's 'files' parameter
 
+    const userId = localStorage.getItem("user_id") || "guest_user";
+
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/v1/upload",
+        `http://localhost:8000/api/v1/upload?user_id=${encodeURIComponent(userId)}`,
         formData,
         {
           headers: {

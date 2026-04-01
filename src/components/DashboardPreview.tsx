@@ -58,11 +58,45 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
   const [documents, setDocuments] = useState<any[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
+  
+  const handleDownload = async (docId: string, filename: string) => {
+    try {
+      const response = await axios.get(`http://localhost:8000/api/v1/documents/${docId}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (error) {
+      console.error("Failed to download document", error);
+      alert("Download failed.");
+    }
+  };
+
+  const handleRemoveDuplicates = async () => {
+    const userId = localStorage.getItem("user_id") || "guest_user";
+    try {
+      setLoadingDocs(true);
+      const response = await axios.delete(`http://localhost:8000/api/v1/documents/duplicates?user_id=${encodeURIComponent(userId)}`);
+      alert(response.data.message || "Duplicates removed");
+      await fetchDocuments();
+    } catch (error) {
+      console.error("Failed to remove duplicates", error);
+      alert("Failed to remove duplicates.");
+      setLoadingDocs(false);
+    }
+  };
+
   const fetchDocuments = async () => {
     setLoadingDocs(true);
     try {
+      const userId = localStorage.getItem("user_id") || "guest_user";
       const res = await axios.get(
-        "http://localhost:8000/api/v1/documents?user_id=guest_user",
+        `http://localhost:8000/api/v1/documents?user_id=${encodeURIComponent(userId)}`
       );
       setDocuments(res.data);
     } catch (error) {
@@ -165,8 +199,16 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                 ({documents.length} processed)
               </span>
             </h3>
-            <button
-              onClick={fetchDocuments}
+            
+            <div className="flex gap-4">
+              <button
+                onClick={handleRemoveDuplicates}
+                className="flex items-center gap-1 text-xs text-destructive hover:text-red-500 transition-colors"
+              >
+                Remove Duplicates
+              </button>
+              <button
+                onClick={fetchDocuments}
               disabled={loadingDocs}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
             >
@@ -175,6 +217,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
               />
               Refresh
             </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -232,7 +275,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         {doc.status !== "processing" ? (
                           <>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-medium transition-colors">
+                            <button onClick={() => handleDownload(doc.id, doc.filename)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-medium transition-colors">
                               <Download className="w-3.5 h-3.5" />
                               Download
                             </button>

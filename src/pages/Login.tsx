@@ -159,10 +159,17 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1800));
+    // Simulate authentication
+    await new Promise((r) => setTimeout(r, 1000));
     setLoading(false);
-    navigate("/");
+
+    // Store user session info
+    localStorage.setItem("user_id", email);
+    localStorage.setItem("user_token", "dummy-jwt-token");
+
+    navigate("/workspace");
   };
 
   return (

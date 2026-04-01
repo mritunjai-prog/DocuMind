@@ -9,8 +9,8 @@ load_dotenv()
 # Use SQLite for extreme local testing without docker
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./local_test.db")
 
-# Connect args specific to SQLite to avoid Thread errors in FastAPI
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
