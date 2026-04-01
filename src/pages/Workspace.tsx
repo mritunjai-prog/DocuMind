@@ -18,9 +18,8 @@ const Workspace = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Process Supabase OAuth hash and save session
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+    // Process Supabase OAuth hash and save session using the reliable auth listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       
       if (session) {
         const userId = session.user?.id;
@@ -42,14 +41,30 @@ const Workspace = () => {
         if (userId) {
           localStorage.setItem("user_id", userId);
           localStorage.setItem("user_token", session.access_token);
+          
+          // Force a small reload so the DashboardPreview picks up the New userId from localStorage instead of 'guest_user'
+          if (hash && hash.includes("access_token")) {
+             window.location.reload();
+          }
         }
-      } else if (!window.location.hash.includes("access_token")) {
+      } else if (event === "SIGNED_OUT" || (!session && !window.location.hash.includes("access_token"))) {
         // No session and no incoming token -> redirect to login
         navigate("/login");
       }
-    };
+    });
 
-    checkSession();
+    // Also run a manual check just in case the event already fired before mount
+    const manualCheck = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session && !window.location.hash.includes("access_token")) {
+        navigate("/login");
+      }
+    };
+    manualCheck();
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [navigate, toast]);
 
   const handleOpenDocument = (doc: any) => {
