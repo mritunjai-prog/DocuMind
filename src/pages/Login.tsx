@@ -20,6 +20,7 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import Tilt from "react-parallax-tilt";
+import { supabase } from "@/lib/supabase";
 
 /* ── floating particle ── */
 const Particle = ({
@@ -161,15 +162,27 @@ const Login = () => {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
-    // Simulate authentication
-    await new Promise((r) => setTimeout(r, 1000));
+
+    // Sign in with Supabase Authentication
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     setLoading(false);
 
-    // Store user session info
-    localStorage.setItem("user_id", email);
-    localStorage.setItem("user_token", "dummy-jwt-token");
+    if (error) {
+      alert("Authentication failed: " + error.message);
+      return;
+    }
 
-    navigate("/workspace");
+    // Store user session info (you could rely entirely on Supabase session instead,
+    // but we'll persist this to make sure the rest of your app still works)
+    if (data?.session) {
+      localStorage.setItem("user_id", data.user?.id || email);
+      localStorage.setItem("user_token", data.session.access_token);
+      navigate("/workspace");
+    }
   };
 
   return (
@@ -569,6 +582,16 @@ const Login = () => {
                     <motion.button
                       key={label}
                       type="button"
+                      onClick={() => {
+                        const provider =
+                          label === "Google" ? "google" : "azure";
+                        supabase.auth.signInWithOAuth({
+                          provider,
+                          options: {
+                            redirectTo: `${window.location.origin}/workspace`,
+                          },
+                        });
+                      }}
                       whileHover={{ scale: 1.03, y: -1 }}
                       whileTap={{ scale: 0.97 }}
                       className="py-3 rounded-2xl glass glow-border glow-border-hover text-sm font-semibold text-foreground flex items-center justify-center gap-2 transition-all"
