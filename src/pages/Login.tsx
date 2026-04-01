@@ -585,6 +585,9 @@ const Login = () => {
                       onClick={() => {
                         const provider =
                           label === "Google" ? "google" : "azure";
+                        console.log(
+                          `Initiating OAuth with provider: ${provider}`,
+                        );
                         supabase.auth.signInWithOAuth({
                           provider,
                           options: {

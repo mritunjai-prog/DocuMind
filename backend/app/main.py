@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
@@ -13,9 +14,10 @@ app = FastAPI(
 )
 
 # Configure CORS for frontend access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+allowed_origins = (
+    os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if os.getenv("ALLOWED_ORIGINS")
+    else [
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8080",
@@ -24,7 +26,12 @@ app.add_middleware(
         "http://127.0.0.1:8081",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8082",
-    ],  # React/Vite dev ports
+    ]
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

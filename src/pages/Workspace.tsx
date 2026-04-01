@@ -16,53 +16,79 @@ const Workspace = () => {
   const uploadRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const hasShownToast = useRef(false);
+  const previousSessionId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Process Supabase OAuth hash and save session using the reliable auth listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      
-      if (session) {
-        const userId = session.user?.id;
-        
-        // If we just got the token from the URL hash, let's notify the user
-        const hash = window.location.hash;
-        if (hash && hash.includes("access_token")) {
-          // Tell the user they hit success!
-          toast({
-            title: "Logged in successfully",
-            description: `Welcome back, ${session.user.user_metadata?.full_name || session.user.email}!`,
-          });
-          
-          // Clean the URL so the huge token string disappears from the browser bar
-          window.history.replaceState(null, "", window.location.pathname);
-        }
+    // Process Supabase OAuth and save session using the reliable auth listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
 
-        // Save legacy local variables so old backend fetching logic doesn't break
-        if (userId) {
-          localStorage.setItem("user_id", userId);
-          localStorage.setItem("user_token", session.access_token);
-          
-          // Force a small reload so the DashboardPreview picks up the New userId from localStorage instead of 'guest_user'
-          if (hash && hash.includes("access_token")) {
-             window.location.reload();
+        if (session) {
+          const userId = session.user?.id;
+          const currentSessionId = session.user?.user_metadata?.sub || userId;
+
+          // Show welcome toast if this is a fresh login (new session we haven't greeted yet)
+          if (
+            !hasShownToast.current &&
+            currentSessionId &&
+            previousSessionId.current !== currentSessionId
+          ) {
+            console.log("New session detected, showing welcome toast");
+            hasShownToast.current = true;
+
+            // Tell the user they hit success!
+            setTimeout(() => {
+              console.log("Toast is displaying now");
+              toast({
+                title: "Logged in successfully",
+                description: `Welcome back, ${session.user.user_metadata?.full_name || session.user.email}!`,
+                duration: 8000, // 8 seconds so you can definitely see it
+              });
+            }, 300); // Small delay to ensure visible
           }
+
+          previousSessionId.current = currentSessionId;
+
+          // Save legacy local variables so old backend fetching logic doesn't break
+          if (userId) {
+            console.log("Saving user session to localStorage:", userId);
+            localStorage.setItem("user_id", userId);
+            localStorage.setItem("user_token", session.access_token);
+
+            // Trigger a quick event so other components know the user ID changed
+            window.dispatchEvent(new Event("storage"));
+          }
+        } else if (event === "SIGNED_OUT") {
+          // User signed out explicitly
+          console.log("User signed out, redirecting to login");
+          hasShownToast.current = false;
+          previousSessionId.current = null;
+          navigate("/login");
         }
-      } else if (event === "SIGNED_OUT" || (!session && !window.location.hash.includes("access_token"))) {
-        // No session and no incoming token -> redirect to login
-        navigate("/login");
-      }
-    });
+      },
+    );
 
     // Also run a manual check just in case the event already fired before mount
     const manualCheck = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session && !window.location.hash.includes("access_token")) {
+      if (!data.session) {
+        console.log("Manual check: no session found, redirecting to login");
         navigate("/login");
+      } else if (data.session) {
+        console.log(
+          "Manual check: session found for user",
+          data.session.user.email,
+        );
       }
     };
-    manualCheck();
+
+    // Delay the manual check to let onAuthStateChange finish processing first
+    const timer = setTimeout(manualCheck, 100);
 
     return () => {
+      clearTimeout(timer);
       authListener.subscription.unsubscribe();
     };
   }, [navigate, toast]);
