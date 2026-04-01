@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import DocumentUpload from "@/components/DocumentUpload";
 import DashboardPreview from "@/components/DashboardPreview";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +14,43 @@ const Workspace = () => {
     filename: string;
   } | null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Process Supabase OAuth hash and save session
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session) {
+        const userId = session.user?.id;
+        
+        // If we just got the token from the URL hash, let's notify the user
+        const hash = window.location.hash;
+        if (hash && hash.includes("access_token")) {
+          // Tell the user they hit success!
+          toast({
+            title: "Logged in successfully",
+            description: `Welcome back, ${session.user.user_metadata?.full_name || session.user.email}!`,
+          });
+          
+          // Clean the URL so the huge token string disappears from the browser bar
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+
+        // Save legacy local variables so old backend fetching logic doesn't break
+        if (userId) {
+          localStorage.setItem("user_id", userId);
+          localStorage.setItem("user_token", session.access_token);
+        }
+      } else if (!window.location.hash.includes("access_token")) {
+        // No session and no incoming token -> redirect to login
+        navigate("/login");
+      }
+    };
+
+    checkSession();
+  }, [navigate, toast]);
 
   const handleOpenDocument = (doc: any) => {
     setSelectedDoc({ request_id: doc.id, filename: doc.filename });
