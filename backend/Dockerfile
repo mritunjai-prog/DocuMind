@@ -21,9 +21,6 @@ COPY requirements.txt /app/
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Download spacy model
-RUN python -m spacy download en_core_web_sm
-
 # Copy project
 COPY . /app/
 
