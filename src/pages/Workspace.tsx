@@ -6,6 +6,7 @@ import DocumentUpload from "@/components/DocumentUpload";
 import DashboardPreview from "@/components/DashboardPreview";
 import { motion, AnimatePresence } from "framer-motion";
 import { Preloader } from "@/components/Preloader";
+import { Home, LogOut } from "lucide-react";
 
 const Workspace = () => {
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,20 @@ const Workspace = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("user_token");
+      navigate("/login");
+    }
+  };
+
+  const handleGoHome = () => {
+    navigate("/");
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -114,23 +129,47 @@ const Workspace = () => {
       >
         <div className="container mx-auto px-6 max-w-6xl">
           {/* Header */}
-          <div className="mb-10 text-center md:text-left">
-            <motion.h1
+          <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="text-center md:text-left">
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-3xl md:text-5xl font-extrabold text-foreground mb-4"
+              >
+                Your <span className="text-gradient-animated">Workspace</span>
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-lg text-muted-foreground max-w-2xl"
+              >
+                Upload new documents, run the ML extraction pipelines, and chat
+                with your files using the integrated RAG engine.
+              </motion.p>
+            </div>
+
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl md:text-5xl font-extrabold text-foreground mb-4"
+              transition={{ delay: 0.15 }}
+              className="flex items-center gap-3 self-center md:self-start"
             >
-              Your <span className="text-gradient-animated">Workspace</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-lg text-muted-foreground max-w-2xl"
-            >
-              Upload new documents, run the ML extraction pipelines, and chat
-              with your files using the integrated RAG engine.
-            </motion.p>
+              <button
+                onClick={handleGoHome}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-primary/10"
+              >
+                <Home className="h-4 w-4" />
+                Home
+              </button>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-primary/10"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </motion.div>
           </div>
 
           {/* Upload Component */}

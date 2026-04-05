@@ -18,6 +18,17 @@ interface DocumentUploadProps {
   initialDocument?: { request_id: string; filename: string } | null;
 }
 
+interface ShortlistResult {
+  shortlisted: boolean;
+  status: string;
+  message: string;
+  job_role: string;
+  match_percentage: number;
+  required_skills: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+}
+
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   initialDocument,
 }) => {
@@ -31,13 +42,50 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   // Interactive features state
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "summary" | "ocr" | "ner" | "chat" | "anomalies"
+    "summary" | "ocr" | "ner" | "chat" | "anomalies" | "hr"
   >("summary");
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState<
     { role: string; text: string }[]
   >([]);
   const [isChatting, setIsChatting] = useState(false);
+  const [jobRole, setJobRole] = useState("SDE");
+  const [requiredSkillsInput, setRequiredSkillsInput] = useState(
+    "machine learning, react, js, node, mongodb",
+  );
+  const [isShortlisting, setIsShortlisting] = useState(false);
+  const [shortlistResult, setShortlistResult] =
+    useState<ShortlistResult | null>(null);
+
+  const renderTextWithLinks = (text: string) => {
+    const parts = text.split(/((?:https?:\/\/|www\.)[^\s]+)/gi);
+
+    return parts.map((part, idx) => {
+      if (!part) return null;
+
+      if (/^(?:https?:\/\/|www\.)/i.test(part)) {
+        const clean = part.replace(/[),.;]+$/g, "");
+        const trailing = part.slice(clean.length);
+        const href = clean.startsWith("http") ? clean : `https://${clean}`;
+
+        return (
+          <span key={`${clean}-${idx}`}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline underline-offset-2 text-primary hover:opacity-80"
+            >
+              {clean}
+            </a>
+            {trailing}
+          </span>
+        );
+      }
+
+      return <span key={`txt-${idx}`}>{part}</span>;
+    });
+  };
 
   useEffect(() => {
     if (initialDocument) {
@@ -46,6 +94,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       setUploadStatus("success");
       fetchAnalysis(initialDocument.request_id);
       setActiveTab("chat");
+      setShortlistResult(null);
     }
   }, [initialDocument]);
 
@@ -56,6 +105,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       setResult(null);
       setAnalysisData(null);
       setChatHistory([]);
+      setShortlistResult(null);
     }
   };
 
@@ -101,6 +151,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         `http://localhost:8000/api/v1/documents/${docId}/analysis`,
       );
       setAnalysisData(res.data);
+
+      // Auto-poll if still processing
+      if (res.data.status !== "completed" && res.data.status !== "failed") {
+        setTimeout(() => fetchAnalysis(docId), 3000);
+      }
     } catch (err) {
       console.error("Analysis fetch failed", err);
     }
@@ -135,6 +190,57 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       ]);
     } finally {
       setIsChatting(false);
+    }
+  };
+
+  const handleShortlistCheck = async () => {
+    if (!result?.request_id) return;
+
+    const skills = requiredSkillsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (skills.length === 0) {
+      setShortlistResult({
+        shortlisted: false,
+        status: "invalid_input",
+        message: "Please provide at least one required skill.",
+        job_role: jobRole,
+        match_percentage: 0,
+        required_skills: [],
+        matched_skills: [],
+        missing_skills: [],
+      });
+      return;
+    }
+
+    setIsShortlisting(true);
+    try {
+      const res = await axios.post(
+        `http://localhost:8000/api/v1/documents/${result.request_id}/shortlist`,
+        {
+          job_role: jobRole,
+          required_skills: skills,
+        },
+      );
+      setShortlistResult(res.data);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.detail ||
+        "Failed to evaluate shortlist criteria. Please try again.";
+      setShortlistResult({
+        shortlisted: false,
+        status: "error",
+        message,
+        job_role: jobRole,
+        match_percentage: 0,
+        required_skills: skills,
+        matched_skills: [],
+        missing_skills: skills,
+      });
+    } finally {
+      setIsShortlisting(false);
     }
   };
 
@@ -235,16 +341,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 </div>
                 <div className="p-4 rounded-xl bg-background/50">
                   <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <p className="font-medium text-sm text-primary flex items-center gap-2">
+                  <p
+                    className={`font-medium text-sm flex items-center gap-2 ${analysisData?.status === "failed" ? "text-destructive" : "text-primary"}`}
+                  >
                     {analysisData?.status === "completed" ? (
                       <>
                         <CheckCircle2 className="w-4 h-4 text-success" />{" "}
-                        completed
+                        Completed
+                      </>
+                    ) : analysisData?.status === "failed" ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4 text-destructive" />{" "}
+                        Failed
                       </>
                     ) : (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />{" "}
-                        {(result.status || "processing").toLowerCase()}
+                        <Loader2 className="w-4 h-4 animate-spin" /> Processing
                       </>
                     )}
                   </p>
@@ -261,7 +373,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
               {analysisData && (
                 <div className="mt-8 border-t border-border/50 pt-6">
                   <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-                    {["summary", "ocr", "ner", "anomalies", "chat"].map(
+                    {["summary", "ocr", "ner", "anomalies", "hr", "chat"].map(
                       (tab) => (
                         <button
                           key={tab}
@@ -301,7 +413,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                             <Bot className="w-5 h-5 text-primary" />
                             AI Document Summary
                           </h4>
-                          <p className="text-muted-foreground leading-relaxed">
+                          <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                             {analysisData.summary}
                           </p>
                         </div>
@@ -394,6 +506,148 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                           </div>
                         </div>
                       )}
+                      {activeTab === "hr" && (
+                        <div className="space-y-5">
+                          <h4 className="text-lg font-bold mb-1 flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-primary" />
+                            HR Shortlisting
+                          </h4>
+
+                          <p className="text-sm text-muted-foreground">
+                            Define a job role and required skills. The resume
+                            will be shortlisted only when all required skills
+                            are present.
+                          </p>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold text-muted-foreground uppercase">
+                                Job Role
+                              </label>
+                              <input
+                                type="text"
+                                value={jobRole}
+                                onChange={(e) => setJobRole(e.target.value)}
+                                placeholder="e.g., SDE"
+                                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold text-muted-foreground uppercase">
+                                Required Skills (comma separated)
+                              </label>
+                              <input
+                                type="text"
+                                value={requiredSkillsInput}
+                                onChange={(e) =>
+                                  setRequiredSkillsInput(e.target.value)
+                                }
+                                placeholder="machine learning, react, js, node, mongodb"
+                                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleShortlistCheck}
+                            disabled={isShortlisting || !result?.request_id}
+                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                          >
+                            {isShortlisting ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Evaluating...
+                              </>
+                            ) : (
+                              <>
+                                <Search className="w-4 h-4" />
+                                Evaluate Shortlist
+                              </>
+                            )}
+                          </button>
+
+                          {shortlistResult && (
+                            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                              <div
+                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold uppercase ${
+                                  shortlistResult.shortlisted
+                                    ? "bg-success/20 text-success"
+                                    : "bg-destructive/20 text-destructive"
+                                }`}
+                              >
+                                {shortlistResult.shortlisted ? (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                ) : (
+                                  <AlertTriangle className="w-4 h-4" />
+                                )}
+                                {shortlistResult.shortlisted
+                                  ? "Ready to Move Further"
+                                  : "Not Shortlisted"}
+                              </div>
+
+                              <p className="text-sm text-muted-foreground">
+                                {shortlistResult.message}
+                              </p>
+
+                              <p className="text-sm">
+                                <span className="font-semibold">
+                                  Match Score:
+                                </span>{" "}
+                                {shortlistResult.match_percentage}%
+                              </p>
+
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                  Matched Skills
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {shortlistResult.matched_skills.length > 0 ? (
+                                    shortlistResult.matched_skills.map(
+                                      (skill, idx) => (
+                                        <span
+                                          key={`${skill}-${idx}`}
+                                          className="px-2 py-1 rounded-full text-xs bg-success/20 text-success"
+                                        >
+                                          {skill}
+                                        </span>
+                                      ),
+                                    )
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      No matches yet
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                  Missing Skills
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {shortlistResult.missing_skills.length > 0 ? (
+                                    shortlistResult.missing_skills.map(
+                                      (skill, idx) => (
+                                        <span
+                                          key={`${skill}-${idx}`}
+                                          className="px-2 py-1 rounded-full text-xs bg-destructive/20 text-destructive"
+                                        >
+                                          {skill}
+                                        </span>
+                                      ),
+                                    )
+                                  ) : (
+                                    <span className="text-xs text-success">
+                                      All required skills matched
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {activeTab === "chat" && (
                         <div className="flex flex-col h-full min-h-[350px]">
                           <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -423,7 +677,9 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                                         : "bg-secondary text-secondary-foreground rounded-tl-sm"
                                     }`}
                                   >
-                                    {msg.text}
+                                    <div className="whitespace-pre-line break-words">
+                                      {renderTextWithLinks(msg.text)}
+                                    </div>
                                   </div>
                                 </div>
                               ))
@@ -479,6 +735,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   setResult(null);
                   setAnalysisData(null);
                   setChatHistory([]);
+                  setShortlistResult(null);
                   setActiveTab("summary");
                 }}
                 className="px-6 py-2 rounded-full border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors"

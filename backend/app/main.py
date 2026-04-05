@@ -1,8 +1,8 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.database import engine, Base
-from app.models import document  # Ensure models are loaded before creating tables
+from .core.database import engine, Base
+from . import models  # Ensure models are loaded before creating tables
 
 # Create all tables in the database (SQLAlchemy)
 Base.metadata.create_all(bind=engine)
@@ -47,7 +47,7 @@ async def health_check():
 
 
 # Include routers
-from app.routes import upload
+from .routes import upload
 
 app.include_router(upload.router, prefix="/api/v1")
 # app.include_router(upload.router, prefix="/api/v1")

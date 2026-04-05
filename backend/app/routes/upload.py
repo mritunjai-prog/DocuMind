@@ -1,14 +1,15 @@
 import uuid
 import json
+import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db, SessionLocal
-from app.models.document import Document
-from app.services.storage import StorageService
-from app.services.rag import DocumentRAG
+from ..core.database import get_db, SessionLocal
+from ..models.document import Document
+from ..services.storage import StorageService
+from ..services.rag import DocumentRAG
 
 router = APIRouter()
 storage = StorageService()
@@ -21,12 +22,11 @@ async def virus_scan(file: UploadFile) -> bool:
 
 def background_process_document(doc_id: str, file_path: str):
     print(f"Starting Background Processing for {doc_id}")
-    success = DocumentRAG.process_document_into_rag(doc_id, file_path)
-
-    analysis = DocumentRAG.analyze_document(doc_id)
-
     db = SessionLocal()
     try:
+        success = DocumentRAG.process_document_into_rag(doc_id, file_path)
+        analysis = DocumentRAG.analyze_document(doc_id)
+
         doc = db.query(Document).filter(Document.id == doc_id).first()
         if doc:
             if success and analysis.get("status") == "completed":
@@ -40,6 +40,13 @@ def background_process_document(doc_id: str, file_path: str):
             else:
                 doc.status = "failed"
                 doc.summary = analysis.get("summary", "Process failed.")
+            db.commit()
+    except BaseException as e:
+        print(f"Exception in background_process_document: {e}")
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if doc:
+            doc.status = "failed"
+            doc.summary = f"Process failed: {str(e)}"
             db.commit()
     finally:
         db.close()
@@ -123,6 +130,64 @@ class QueryRequest(BaseModel):
     query: str
 
 
+class ShortlistRequest(BaseModel):
+    job_role: str
+    required_skills: Union[List[str], str]
+
+
+def _normalize_skill_text(text: str) -> str:
+    lowered = text.lower()
+    lowered = lowered.replace("node.js", "nodejs")
+    lowered = lowered.replace("react.js", "react")
+    lowered = lowered.replace("mongo db", "mongodb")
+    lowered = re.sub(r"[^a-z0-9#+\.\s]", " ", lowered)
+    lowered = re.sub(r"\s+", " ", lowered)
+    return lowered.strip()
+
+
+def _skill_aliases(skill: str) -> List[str]:
+    base = _normalize_skill_text(skill)
+    aliases = {
+        "machine learning": [
+            "machine learning",
+            "ml",
+            "deep learning",
+            "artificial intelligence",
+            "ai",
+        ],
+        "react": ["react", "reactjs", "rweact"],
+        "javascript": ["javascript", "js", "ecmascript"],
+        "node": ["node", "nodejs"],
+        "mongodb": ["mongodb", "mongo"],
+        "c++": ["c++", "cpp"],
+        "c#": ["c#", "csharp"],
+    }
+
+    for canonical, variants in aliases.items():
+        if base == canonical or base in variants:
+            return variants
+
+    return [base]
+
+
+def _text_contains_skill(text: str, skill: str) -> bool:
+    normalized_text = _normalize_skill_text(text)
+    for alias in _skill_aliases(skill):
+        if not alias:
+            continue
+
+        # Use boundary matching for short tokens like js/ml.
+        if len(alias) <= 3 and " " not in alias:
+            if re.search(rf"\b{re.escape(alias)}\b", normalized_text):
+                return True
+            continue
+
+        if alias in normalized_text:
+            return True
+
+    return False
+
+
 @router.get("/documents")
 def get_all_documents(user_id: str = "guest_user", db: Session = Depends(get_db)):
     """
@@ -189,6 +254,73 @@ def get_document_analysis(document_id: str, db: Session = Depends(get_db)):
         }
 
 
+@router.post("/documents/{document_id}/shortlist")
+def shortlist_document(
+    document_id: str,
+    request: ShortlistRequest,
+    db: Session = Depends(get_db),
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if doc.status != "completed":
+        return {
+            "document_id": document_id,
+            "status": "processing",
+            "shortlisted": False,
+            "message": "Document processing is not complete yet.",
+        }
+
+    required_skills = request.required_skills
+    if isinstance(required_skills, str):
+        required_skills = [s.strip() for s in required_skills.split(",") if s.strip()]
+
+    cleaned_required_skills = [
+        skill.strip() for skill in required_skills if skill.strip()
+    ]
+    if not cleaned_required_skills:
+        raise HTTPException(
+            status_code=400, detail="At least one required skill is needed"
+        )
+
+    resume_text = f"{doc.extracted_text or ''}\n{doc.summary or ''}"
+    if not resume_text.strip():
+        raise HTTPException(
+            status_code=400, detail="No extracted text available for this document"
+        )
+
+    matched_skills: List[str] = []
+    missing_skills: List[str] = []
+
+    for skill in cleaned_required_skills:
+        if _text_contains_skill(resume_text, skill):
+            matched_skills.append(skill)
+        else:
+            missing_skills.append(skill)
+
+    shortlisted = len(missing_skills) == 0
+    match_percentage = round(
+        (len(matched_skills) / len(cleaned_required_skills)) * 100, 2
+    )
+
+    return {
+        "document_id": document_id,
+        "job_role": request.job_role,
+        "required_skills": cleaned_required_skills,
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills,
+        "match_percentage": match_percentage,
+        "shortlisted": shortlisted,
+        "status": "ready_to_move_further" if shortlisted else "not_shortlisted",
+        "message": (
+            "Application is ready to move further."
+            if shortlisted
+            else "Application does not meet all required skills."
+        ),
+    }
+
+
 @router.post("/documents/{document_id}/query")
 def query_document(document_id: str, request: QueryRequest):
     """
@@ -203,6 +335,7 @@ def query_document(document_id: str, request: QueryRequest):
 from fastapi.responses import FileResponse
 import os
 
+
 @router.get("/documents/{document_id}/download")
 def download_document(document_id: str, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.id == document_id).first()
@@ -211,6 +344,7 @@ def download_document(document_id: str, db: Session = Depends(get_db)):
     if not doc.file_path or not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
     return FileResponse(path=doc.file_path, filename=doc.filename)
+
 
 @router.delete("/documents/duplicates")
 def remove_duplicates(user_id: str = "guest_user", db: Session = Depends(get_db)):

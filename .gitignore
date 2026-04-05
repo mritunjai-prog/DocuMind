@@ -25,9 +25,12 @@ dist-ssr
 
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 .env
+local_test.db
+backend/local_test.db
 
 # Uploads/Data
 *.pdf
