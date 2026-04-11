@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db, SessionLocal
 from ..models.document import Document
 from ..services.storage import StorageService
-from ..services.rag import DocumentRAG
 
 router = APIRouter()
 storage = StorageService()
@@ -22,6 +21,9 @@ async def virus_scan(file: UploadFile) -> bool:
 
 def background_process_document(doc_id: str, file_path: str):
     print(f"Starting Background Processing for {doc_id}")
+    # Lazy import to keep API startup memory low in constrained environments.
+    from ..services.rag import DocumentRAG
+
     db = SessionLocal()
     try:
         success = DocumentRAG.process_document_into_rag(doc_id, file_path)
@@ -327,6 +329,8 @@ def query_document(document_id: str, request: QueryRequest):
     Real RAG interface endpoint wrapper.
     It queries the context in FAISS and passes it to ChatGPT.
     """
+    from ..services.rag import DocumentRAG
+
     result = DocumentRAG.query_document(document_id, request.query)
     # The output format is already {"answer": str, "sources": list}
     return result
