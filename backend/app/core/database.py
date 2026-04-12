@@ -7,7 +7,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Use SQLite for extreme local testing without docker
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./local_test.db")
+DATABASE_URL = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("DATABASE_URI")
+    or "sqlite:///./local_test.db"
+)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
