@@ -4,6 +4,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.database import engine, Base
 from . import models  # Ensure models are loaded before creating tables
 
+
+def _normalized_origin(origin: str) -> str:
+    cleaned = origin.strip().strip("\"'")
+    return cleaned[:-1] if cleaned.endswith("/") else cleaned
+
+
+def _parse_allowed_origins() -> list[str]:
+    raw_value = os.getenv("ALLOWED_ORIGINS", "")
+    if not raw_value:
+        return [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://localhost:8081",
+            "http://localhost:8082",
+            "http://127.0.0.1:8081",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8082",
+            "https://documinnd.netlify.app",
+        ]
+
+    origins = [_normalized_origin(item) for item in raw_value.split(",")]
+    return [origin for origin in origins if origin]
+
 # Create all tables in the database (SQLAlchemy)
 Base.metadata.create_all(bind=engine)
 
@@ -14,20 +38,7 @@ app = FastAPI(
 )
 
 # Configure CORS for frontend access
-allowed_origins = (
-    os.getenv("ALLOWED_ORIGINS", "").split(",")
-    if os.getenv("ALLOWED_ORIGINS")
-    else [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://localhost:8081",
-        "http://localhost:8082",
-        "http://127.0.0.1:8081",
-        "http://127.0.0.1:8080",
-        "http://127.0.0.1:8082",
-    ]
-)
+allowed_origins = _parse_allowed_origins()
 
 app.add_middleware(
     CORSMiddleware,
