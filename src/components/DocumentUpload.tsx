@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+
 interface DocumentUploadProps {
   initialDocument?: { request_id: string; filename: string } | null;
 }
@@ -122,7 +125,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     try {
       const response = await axios.post(
-        `http://localhost:8000/api/v1/upload?user_id=${encodeURIComponent(userId)}`,
+        `${API_BASE_URL}/upload?user_id=${encodeURIComponent(userId)}`,
         formData,
         {
           headers: {
@@ -148,7 +151,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const fetchAnalysis = async (docId: string) => {
     try {
       const res = await axios.get(
-        `http://localhost:8000/api/v1/documents/${docId}/analysis`,
+        `${API_BASE_URL}/documents/${docId}/analysis`,
       );
       setAnalysisData(res.data);
 
@@ -171,7 +174,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     try {
       const res = await axios.post(
-        `http://localhost:8000/api/v1/documents/${result.request_id}/query`,
+        `${API_BASE_URL}/documents/${result.request_id}/query`,
         {
           query: query,
         },
@@ -218,7 +221,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     setIsShortlisting(true);
     try {
       const res = await axios.post(
-        `http://localhost:8000/api/v1/documents/${result.request_id}/shortlist`,
+        `${API_BASE_URL}/documents/${result.request_id}/shortlist`,
         {
           job_role: jobRole,
           required_skills: skills,

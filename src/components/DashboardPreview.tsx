@@ -11,6 +11,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+
 const metrics = [
   {
     icon: FileCheck,
@@ -61,7 +64,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
   
   const handleDownload = async (docId: string, filename: string) => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/v1/documents/${docId}/download`, {
+      const response = await axios.get(`${API_BASE_URL}/documents/${docId}/download`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -81,7 +84,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
     const userId = localStorage.getItem("user_id") || "guest_user";
     try {
       setLoadingDocs(true);
-      const response = await axios.delete(`http://localhost:8000/api/v1/documents/duplicates?user_id=${encodeURIComponent(userId)}`);
+      const response = await axios.delete(`${API_BASE_URL}/documents/duplicates?user_id=${encodeURIComponent(userId)}`);
       alert(response.data.message || "Duplicates removed");
       await fetchDocuments();
     } catch (error) {
@@ -96,7 +99,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
     try {
       const userId = localStorage.getItem("user_id") || "guest_user";
       const res = await axios.get(
-        `http://localhost:8000/api/v1/documents?user_id=${encodeURIComponent(userId)}`
+        `${API_BASE_URL}/documents?user_id=${encodeURIComponent(userId)}`
       );
       setDocuments(res.data);
     } catch (error) {
