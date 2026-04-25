@@ -267,6 +267,7 @@ Experience DocuMind in action:
 ## ✨ What's Actually Implemented
 
 ### 🎨 Frontend (Production-Ready)
+
 - **Landing Page** - Hero section, features showcase, pipeline visualization
 - **Authentication** - Supabase integration with Google OAuth
 - **Workspace Dashboard** - Document upload, processing status, results display
@@ -276,6 +277,7 @@ Experience DocuMind in action:
 - **Document Management** - Upload, track, and view processed documents
 
 ### 🔧 Backend API (Production-Ready)
+
 - **FastAPI Server** - High-performance async Python framework
 - **CORS Enabled** - Supports localhost & production (netlify.app)
 - **Database** - SQLite (local) / PostgreSQL (production)
@@ -287,6 +289,7 @@ Experience DocuMind in action:
 ### 🧠 AI/ML Services (Fully Integrated)
 
 #### 📄 OCR Engine
+
 - **Tesseract Integration** - Text extraction from images/PDFs
 - **Image Preprocessing**:
   - Deskewing (angle detection & correction)
@@ -296,17 +299,20 @@ Experience DocuMind in action:
 - **Accuracy**: 95%+ with optimal preprocessing
 
 #### 🏷️ Document Classification
+
 - **DistilBERT Model** - Fast classification
 - **LayoutLM Support** - Document layout understanding
 - **Auto-detection** - Invoice, Contract, Receipt, Medical, Tax, Insurance, PO, Bank Statements
 - **Confidence Scores** - Per-class probability metrics
 
 #### 🎯 Named Entity Recognition (NER)
+
 - **SpaCy Integration** - Entity extraction
 - **Supported Entities**: People, Organizations, Locations, Money, Dates, Contact Info
 - **Structured Extraction** - JSON format output
 
 #### 💬 RAG System (Retrieval-Augmented Generation)
+
 - **LangChain Framework** - Orchestration engine
 - **Google Gemini LLM** - Advanced language understanding
 - **FAISS Vector Store** - Semantic search (100K+ vectors)
@@ -314,6 +320,7 @@ Experience DocuMind in action:
 - **URL Extraction** - Automatic link normalization
 
 #### ✅ Validation & Quality Assurance
+
 - **Data Validator** - Business logic rules
 - **Anomaly Detection** - Suspicious patterns identification
 - **Document Status Tracking** - Processing pipeline visibility
