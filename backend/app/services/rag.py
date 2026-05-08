@@ -6,7 +6,7 @@ import fitz
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.documents import Document
@@ -181,11 +181,14 @@ def _load_pdf_documents_with_links(file_path: str) -> List[Document]:
 
 
 def _chat_model_candidates() -> List[str]:
-    configured_model = os.getenv("OPENAI_CHAT_MODEL", "").strip()
+    configured_model = os.getenv("GEMINI_CHAT_MODEL", "").strip()
     defaults = [
-        "gpt-4o-mini",
-        "gpt-4-turbo",
-        "gpt-4",
+        "models/gemini-2.5-flash",
+        "gemini-2.5-flash",
+        "models/gemini-2.0-flash",
+        "gemini-2.0-flash",
+        "models/gemini-1.5-pro",
+        "gemini-1.5-pro",
     ]
 
     ordered = [configured_model] + defaults if configured_model else defaults
@@ -214,7 +217,7 @@ def _invoke_chat_with_fallback(
     last_error: Exception | None = None
 
     for model_name in _chat_model_candidates():
-        llm = ChatOpenAI(model=model_name, temperature=0.7)
+        llm = ChatGoogleGenerativeAI(model=model_name)
 
         for attempt in range(max_retries):
             try:
@@ -237,7 +240,7 @@ def _invoke_chat_with_fallback(
 
     if last_error:
         raise last_error
-    raise RuntimeError("No compatible OpenAI chat model is configured.")
+    raise RuntimeError("No compatible Gemini chat model is configured.")
 
 
 def _normalize_pointwise_summary(text: str) -> str:
@@ -438,15 +441,17 @@ class DocumentRAG:
         print(f"Created {len(splits)} chunks.")
 
         try:
-            # Using OpenAI embeddings (works globally, no geo-restrictions)
-            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+            # Note: Google updated their free embedding model names.
+            embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/gemini-embedding-001"
+            )
             vectorstore = FAISS.from_documents(splits, embeddings)
             vector_stores[document_id] = vectorstore
             chat_sessions[document_id] = {"history": [], "price_facts": []}
             print("Successfully vectorized and stored.")
             return True
         except Exception as e:
-            print(f"Error during embedding. Did you set OPENAI_API_KEY?: {e}")
+            print(f"Error during embedding. Did you set GOOGLE_API_KEY?: {e}")
             return False
 
     @staticmethod
@@ -522,7 +527,7 @@ class DocumentRAG:
             }
         except Exception as e:
             return {
-                "answer": f"Error generating answer: {str(e)}\n\nCheck OPENAI_API_KEY and optional OPENAI_CHAT_MODEL in backend/.env.",
+                "answer": f"Error generating answer: {str(e)}\n\nCheck GOOGLE_API_KEY and optional GEMINI_CHAT_MODEL in backend/.env.",
                 "sources": [],
             }
 

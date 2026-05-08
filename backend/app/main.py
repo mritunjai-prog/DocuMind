@@ -28,7 +28,6 @@ def _parse_allowed_origins() -> list[str]:
     origins = [_normalized_origin(item) for item in raw_value.split(",")]
     return [origin for origin in origins if origin]
 
-
 # Create all tables in the database (SQLAlchemy)
 Base.metadata.create_all(bind=engine)
 

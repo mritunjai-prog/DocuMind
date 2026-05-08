@@ -14,12 +14,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const rawApiBaseUrl =
+const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
-const normalizedApiBaseUrl = rawApiBaseUrl.replace(/\/+$/, "");
-const API_BASE_URL = normalizedApiBaseUrl.endsWith("/api/v1")
-  ? normalizedApiBaseUrl
-  : `${normalizedApiBaseUrl}/api/v1`;
 
 interface DocumentUploadProps {
   initialDocument?: { request_id: string; filename: string } | null;
