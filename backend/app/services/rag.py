@@ -6,7 +6,8 @@ import fitz
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_groq import ChatGroq
 from langchain_community.vectorstores import FAISS
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.documents import Document
@@ -181,14 +182,11 @@ def _load_pdf_documents_with_links(file_path: str) -> List[Document]:
 
 
 def _chat_model_candidates() -> List[str]:
-    configured_model = os.getenv("GEMINI_CHAT_MODEL", "").strip()
+    configured_model = os.getenv("GROQ_CHAT_MODEL", "").strip()
     defaults = [
-        "models/gemini-2.5-flash",
-        "gemini-2.5-flash",
-        "models/gemini-2.0-flash",
-        "gemini-2.0-flash",
-        "models/gemini-1.5-pro",
-        "gemini-1.5-pro",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768",
     ]
 
     ordered = [configured_model] + defaults if configured_model else defaults
@@ -212,12 +210,12 @@ def _is_not_found_error(err: Exception) -> bool:
 
 
 def _invoke_chat_with_fallback(
-    messages, max_retries: int = 3, retry_sleep_seconds: int = 20
+    messages, max_retries: int = 3, retry_sleep_seconds: int = 5
 ) -> Tuple[Any, str]:
     last_error: Exception | None = None
 
     for model_name in _chat_model_candidates():
-        llm = ChatGoogleGenerativeAI(model=model_name)
+        llm = ChatGroq(model=model_name, temperature=0)
 
         for attempt in range(max_retries):
             try:
@@ -240,7 +238,7 @@ def _invoke_chat_with_fallback(
 
     if last_error:
         raise last_error
-    raise RuntimeError("No compatible Gemini chat model is configured.")
+    raise RuntimeError("No compatible Groq chat model is configured.")
 
 
 def _normalize_pointwise_summary(text: str) -> str:
@@ -441,9 +439,8 @@ class DocumentRAG:
         print(f"Created {len(splits)} chunks.")
 
         try:
-            # Note: Google updated their free embedding model names.
-            embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/gemini-embedding-001"
+            embeddings = HuggingFaceEndpointEmbeddings(
+                model="sentence-transformers/all-MiniLM-L6-v2"
             )
             vectorstore = FAISS.from_documents(splits, embeddings)
             vector_stores[document_id] = vectorstore
@@ -451,7 +448,7 @@ class DocumentRAG:
             print("Successfully vectorized and stored.")
             return True
         except Exception as e:
-            print(f"Error during embedding. Did you set GOOGLE_API_KEY?: {e}")
+            print(f"Error during embedding. Did you set HUGGINGFACEHUB_API_TOKEN?: {e}")
             return False
 
     @staticmethod
@@ -527,7 +524,7 @@ class DocumentRAG:
             }
         except Exception as e:
             return {
-                "answer": f"Error generating answer: {str(e)}\n\nCheck GOOGLE_API_KEY and optional GEMINI_CHAT_MODEL in backend/.env.",
+                "answer": f"Error generating answer: {str(e)}\n\nCheck GROQ_API_KEY and optional GROQ_CHAT_MODEL in backend/.env.",
                 "sources": [],
             }
 
@@ -603,7 +600,7 @@ class DocumentRAG:
 
             # fallback if missing schema setup
             if not entities:
-                entities = [{"label": "INFO", "text": "Extracted via Gemini"}]
+                entities = [{"label": "INFO", "text": "Extracted via Groq AI"}]
 
             classification_response = safe_invoke(
                 [HumanMessage(content=classification_prompt)]
