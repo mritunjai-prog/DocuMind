@@ -5,8 +5,8 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    host: "::",
-    port: 8080,
+    host: "0.0.0.0",
+    port: 8000,
     strictPort: true,
     headers: {
       "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -14,7 +14,10 @@ export default defineConfig({
       Expires: "0",
     },
     hmr: {
-      overlay: false,
+      host: "localhost",
+      port: 8000,
+      clientPort: 8000,
+      protocol: "ws",
     },
   },
   plugins: [react()],

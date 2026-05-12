@@ -1,24 +1,24 @@
-import cv2
-import numpy as np
-import pytesseract
-import re
 import os
+import re
 from typing import Dict, List
 
-# Tell pytesseract exactly where the binary is installed securely across Windows environments
-tesseract_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-if os.path.exists(tesseract_path):
-    pytesseract.pytesseract.tesseract_cmd = tesseract_path
+# Heavy imports moved to methods to avoid issues in background threads
+# import cv2
+# import numpy as np
+# import pytesseract
 
 
 class ImagePreprocessor:
-    def preprocess(self, image_path: str) -> np.ndarray:
+    def preprocess(self, image_path: str):
         """
         1. Deskew image
         2. Denoise
         3. Binarize
         4. Optimize contrast
         """
+        import cv2
+        import numpy as np
+
         img = cv2.imread(image_path)
         if img is None:
             raise ValueError(f"Could not read image from {image_path}")
@@ -49,8 +49,11 @@ class ImagePreprocessor:
 
         return processed
 
-    def _detect_skew(self, img: np.ndarray) -> float:
+    def _detect_skew(self, img):
         """Detect image rotation angle"""
+        import cv2
+        import numpy as np
+
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 100, 200)
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, 100, 10)
@@ -69,10 +72,13 @@ class ImagePreprocessor:
 
         return float(np.median(angles))
 
-    def _rotate_image(self, img: np.ndarray, angle: float) -> np.ndarray:
+    def _rotate_image(self, img, angle):
         if angle == 0.0:
             return img
-        (h, w) = img.shape[:2]
+        import cv2
+        import numpy as np
+
+        h, w = img.shape[:2]
         center = (w // 2, h // 2)
         M = cv2.getRotationMatrix2D(center, angle, 1.0)
         rotated = cv2.warpAffine(
@@ -386,10 +392,19 @@ class OCREngine:
         self.preprocessor = ImagePreprocessor()
         self.postprocessor = OCRPostProcessor()
 
-    def extract_text(self, image_path: str, document_type: str = "general") -> Dict:
+    def extract_text(self, image_path: str, document_type: str = "general"):
         """
         Use Tesseract with pytesseract
         """
+        import pytesseract
+        import numpy as np
+        import os
+
+        # Set tesseract path if on Windows
+        tesseract_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(tesseract_path):
+            pytesseract.pytesseract.tesseract_cmd = tesseract_path
+
         # Preprocess
         preprocessed = self.preprocessor.preprocess(image_path)
 

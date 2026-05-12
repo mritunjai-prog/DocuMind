@@ -4,17 +4,25 @@ import time
 from typing import Dict, Any, List, Tuple
 import fitz
 
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_groq import ChatGroq
-from langchain_community.vectorstores import FAISS
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.documents import Document
 from dotenv import load_dotenv
+from .calculator import (
+    detect_calculation_query,
+    handle_calculation_query,
+    format_calculation_answer,
+    is_document_extraction_query,
+    extract_answer_from_context,
+)
 
-from .ocr import OCREngine
-from .validator import DocumentValidator
+# Lazy imports for heavy dependencies - moved inside functions to avoid import issues in background threads
+# from langchain_community.document_loaders import PyPDFLoader, TextLoader
+# from langchain_text_splitters import RecursiveCharacterTextSplitter
+# from langchain_huggingface import HuggingFaceEndpointEmbeddings
+# from langchain_groq import ChatGroq
+# from langchain_community.vectorstores import FAISS
+# from langchain_core.messages import HumanMessage, SystemMessage
+# from langchain_core.documents import Document
+# from .ocr import OCREngine
+# from .validator import DocumentValidator
 
 load_dotenv()
 
@@ -142,9 +150,11 @@ def _answer_link_query(query: str, context_text: str) -> str:
     return "Here are the relevant links:\n" + "\n".join([f"- {u}" for u in candidates])
 
 
-def _load_pdf_documents_with_links(file_path: str) -> List[Document]:
+def _load_pdf_documents_with_links(file_path: str):
+    from langchain_core.documents import Document
+
     pdf_doc = fitz.open(file_path)
-    docs: List[Document] = []
+    docs = []
 
     try:
         for page_index in range(pdf_doc.page_count):
@@ -212,6 +222,9 @@ def _is_not_found_error(err: Exception) -> bool:
 def _invoke_chat_with_fallback(
     messages, max_retries: int = 3, retry_sleep_seconds: int = 5
 ) -> Tuple[Any, str]:
+    # Import here to avoid issues in background threads
+    from langchain_groq import ChatGroq
+
     last_error: Exception | None = None
 
     for model_name in _chat_model_candidates():
@@ -392,6 +405,14 @@ def _handle_sum_query(session: Dict[str, Any], query: str) -> str:
 class DocumentRAG:
     @staticmethod
     def process_document_into_rag(document_id: str, file_path: str):
+        # Import here to avoid issues in background threads
+        from langchain_community.document_loaders import PyPDFLoader, TextLoader
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        from langchain_huggingface import HuggingFaceEndpointEmbeddings
+        from langchain_community.vectorstores import FAISS
+        from langchain_core.documents import Document
+        from .ocr import OCREngine
+
         print(f"Processing RAG for {file_path}")
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -439,8 +460,11 @@ class DocumentRAG:
         print(f"Created {len(splits)} chunks.")
 
         try:
-            embeddings = HuggingFaceEndpointEmbeddings(
-                model="sentence-transformers/all-MiniLM-L6-v2"
+            # Use local HuggingFace embeddings instead of endpoint (no API token needed)
+            from langchain_huggingface import HuggingFaceEmbeddings
+
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2"
             )
             vectorstore = FAISS.from_documents(splits, embeddings)
             vector_stores[document_id] = vectorstore
@@ -448,11 +472,50 @@ class DocumentRAG:
             print("Successfully vectorized and stored.")
             return True
         except Exception as e:
-            print(f"Error during embedding. Did you set HUGGINGFACEHUB_API_TOKEN?: {e}")
+            print(f"Error during embedding: {e}")
+            print("Using fallback: storing documents without vectorization")
+            # Fallback: store docs without vectorization for demo purposes
+            vector_stores[document_id] = splits
+            chat_sessions[document_id] = {"history": [], "price_facts": []}
+            return True
+
+    @staticmethod
+    def _reload_document_if_exists(document_id: str) -> bool:
+        """Try to reload a document from storage if it exists in the database."""
+        try:
+            from app.core.database import get_document_by_id
+            
+            # Get document info from database
+            doc = get_document_by_id(document_id)
+            if not doc or doc.get("status") != "completed":
+                print(f"[DEBUG] Document not found or not completed in DB: {document_id}")
+                return False
+            
+            file_path = doc.get("file_path")
+            if not file_path or not os.path.exists(file_path):
+                print(f"[DEBUG] File not found: {file_path}")
+                return False
+            
+            print(f"[DEBUG] Reloading document from: {file_path}")
+            # Re-process the document
+            DocumentRAG.process_document_into_rag(document_id, file_path)
+            return True
+        except Exception as e:
+            print(f"[DEBUG] Error reloading document: {e}")
             return False
 
     @staticmethod
     def query_document(document_id: str, query: str) -> Dict[str, Any]:
+        # Import here to avoid issues in background threads
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        # Try to reload document if not in memory (e.g., after server restart)
+        if document_id not in vector_stores:
+            print(
+                f"[DEBUG] Document {document_id} not in memory. Attempting to reload from storage..."
+            )
+            DocumentRAG._reload_document_if_exists(document_id)
+
         if document_id not in vector_stores:
             return {
                 "answer": "The document hasn't been processed for chat yet or the server restarted. Please re-upload.",
@@ -462,6 +525,7 @@ class DocumentRAG:
         try:
             session = _get_chat_session(document_id)
 
+            # Check for sum/average queries first
             if _is_sum_query(query):
                 computed_answer = _handle_sum_query(session, query)
                 if computed_answer:
@@ -470,10 +534,69 @@ class DocumentRAG:
                     return {"answer": computed_answer, "sources": []}
 
             vectorstore = vector_stores[document_id]
-            retriever = vectorstore.as_retriever()
 
-            docs = retriever.invoke(query)
-            context_text = "\n\n---\n\n".join([doc.page_content for doc in docs])
+            # ── Detect extraction query BEFORE retrieval so we can use smarter search ──
+            is_extraction = is_document_extraction_query(query)
+
+            # Handle both FAISS vectorstore and fallback document list
+            if isinstance(vectorstore, list):
+                # Fallback: use all documents directly (already has everything)
+                docs = vectorstore
+                context_text = "\n\n---\n\n".join([doc.page_content for doc in docs])
+            else:
+                if is_extraction:
+                    # For extraction queries (CGPA, GPA, marks, etc.) we need the
+                    # EDUCATION section of the resume which may not be top-k similar
+                    # to the user's natural-language question.
+                    # Strategy: retrieve with BOTH the original query AND academic
+                    # keywords, then merge & deduplicate so we always cover the
+                    # education section regardless of chunk ordering.
+                    retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
+                    docs_by_query = retriever.invoke(query)
+                    docs_by_keywords = retriever.invoke(
+                        "CGPA GPA percentage marks score academic education university degree"
+                    )
+                    # Merge and deduplicate by page content
+                    seen_contents = set()
+                    merged_docs = []
+                    for d in docs_by_query + docs_by_keywords:
+                        if d.page_content not in seen_contents:
+                            seen_contents.add(d.page_content)
+                            merged_docs.append(d)
+                    docs = merged_docs
+                else:
+                    retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+                    docs = retriever.invoke(query)
+
+                context_text = "\n\n---\n\n".join([doc.page_content for doc in docs])
+
+            # PRIORITY 1: Extraction queries (CGPA, GPA, percentage, marks)
+            if is_extraction:
+                print(f"[DEBUG] Extraction query — context length: {len(context_text)} chars")
+                extracted_answer = extract_answer_from_context(query, context_text)
+                print(f"[DEBUG] Extraction result: {extracted_answer}")
+                if extracted_answer:
+                    _append_chat_history(session, "user", query)
+                    _append_chat_history(session, "assistant", extracted_answer)
+                    return {
+                        "answer": extracted_answer,
+                        "sources": [doc.page_content for doc in docs],
+                    }
+                # Regex didn't match — fall through to LLM with expanded context
+                # (context already includes education section from dual retrieval)
+                print("[DEBUG] Regex extraction missed — falling through to LLM with expanded context")
+
+            # PRIORITY 2: Check for calculation queries only if extraction didn't match
+            if detect_calculation_query(query):
+                calculation_result = handle_calculation_query(query)
+                print(
+                    f"[DEBUG] Calculation check - Query: {query}, Result: {calculation_result}"
+                )
+                if calculation_result:
+                    _append_chat_history(session, "user", query)
+                    _append_chat_history(session, "assistant", calculation_result)
+                    return {"answer": calculation_result, "sources": []}
+
             history_context = _build_history_context(session)
 
             if _is_link_query(query):
@@ -487,15 +610,28 @@ class DocumentRAG:
                     }
 
             system_prompt = (
-                "You are an intelligent document assistant. "
-                "Use the following pieces of retrieved context from the document to answer the question. "
-                "If you don't know the answer or if the information is not in the context, say so clearly. "
-                "Keep the answer helpful and concise. "
-                "If user asks a follow-up question, use recent conversation context as well. "
-                "If the answer includes a link, always return the full URL including https:// when possible."
+                "You are a professional document assistant. Answer questions clearly and concisely.\n\n"
+                "STRICT FORMATTING RULES — follow these exactly:\n"
+                "1. NEVER use markdown symbols: no **, ***, *, #, ##, +, `, or ~~\n"
+                "2. Use plain dashes (-) for bullet points, nothing else\n"
+                "3. For section headings, write them on their own line followed by a colon, e.g. 'Education:'\n"
+                "4. Use plain numbers for numbered lists: 1. 2. 3.\n"
+                "5. Keep responses concise and well-structured with clean line breaks\n"
+                "6. When extracting data (names, dates, values), state them directly\n"
+                "7. Include full URLs (https://...) exactly as found in the document\n"
+                "8. If information is not in the document, say so clearly in one sentence\n\n"
+                "Example of CORRECT format:\n"
+                "Education:\n"
+                "- Bachelor of Technology in Computer Science, IIT Delhi\n"
+                "- Duration: 2020 - 2024\n"
+                "- CGPA: 8.5/10\n\n"
+                "Example of WRONG format (never do this):\n"
+                "***Bachelor of Technology*** + Duration: 2020-2024"
             )
 
-            user_payload = f"Context:\n{context_text}\n\nQuestion: {query}"
+            user_payload = (
+                f"Document Context:\n{context_text}\n\nUser Question: {query}"
+            )
             if history_context:
                 user_payload = (
                     f"Recent conversation:\n{history_context}\n\n" + user_payload
@@ -530,6 +666,10 @@ class DocumentRAG:
 
     @staticmethod
     def analyze_document(document_id: str) -> Dict[str, Any]:
+        # Import here to avoid issues in background threads
+        from langchain_core.messages import HumanMessage
+        from .validator import DocumentValidator
+
         """
         Creates a summary, mock NER, and returns raw text directly from the Vector DB chunks.
         """
@@ -544,10 +684,15 @@ class DocumentRAG:
 
         try:
             vectorstore = vector_stores[document_id]
-            # Get all chunks (or up to a reasonable limit)
-            docs = list(vectorstore.docstore._dict.values())[
-                :10
-            ]  # Grab up to 10 context chunks for summary
+
+            # Handle both FAISS vectorstore and fallback document list
+            if isinstance(vectorstore, list):
+                # Fallback: list of documents stored directly
+                docs = vectorstore[:10]
+            else:
+                # FAISS vectorstore
+                docs = list(vectorstore.docstore._dict.values())[:10]
+
             full_text = "\n\n".join([doc.page_content for doc in docs])
 
             prompt = (

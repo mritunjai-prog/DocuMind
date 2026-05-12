@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -13,9 +13,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+import { API_BASE_URL } from "@/lib/apiBase";
 
 interface DocumentUploadProps {
   initialDocument?: { request_id: string; filename: string } | null;
@@ -59,6 +57,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [isShortlisting, setIsShortlisting] = useState(false);
   const [shortlistResult, setShortlistResult] =
     useState<ShortlistResult | null>(null);
+
+  // Add refs to prevent infinite polling
+  const analysisAttempts = useRef<{ [key: string]: number }>({});
+  const fetchingRef = useRef<Set<string>>(new Set());
 
   const renderTextWithLinks = (text: string) => {
     const parts = text.split(/((?:https?:\/\/|www\.)[^\s]+)/gi);
@@ -148,19 +150,40 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
   };
 
+  const MAX_POLL_ATTEMPTS = 60; // up to ~5 minutes total
+
   const fetchAnalysis = async (docId: string) => {
+    // Prevent concurrent fetches for same doc
+    if (fetchingRef.current.has(docId)) return;
+
+    const attempts = analysisAttempts.current[docId] || 0;
+    if (attempts > MAX_POLL_ATTEMPTS) {
+      console.warn("⚠️ Max fetch attempts reached for", docId);
+      return;
+    }
+
+    fetchingRef.current.add(docId);
+    analysisAttempts.current[docId] = attempts + 1;
+
     try {
       const res = await axios.get(
         `${API_BASE_URL}/documents/${docId}/analysis`,
       );
       setAnalysisData(res.data);
 
-      // Auto-poll if still processing
-      if (res.data.status !== "completed" && res.data.status !== "failed") {
-        setTimeout(() => fetchAnalysis(docId), 3000);
+      const status = res.data.status;
+      if (status !== "completed" && status !== "failed") {
+        // Poll faster while still 'uploaded', slower once 'processing' (model loading)
+        const delay = status === "processing" ? 5000 : 3000;
+        setTimeout(() => fetchAnalysis(docId), delay);
       }
     } catch (err) {
-      console.error("Analysis fetch failed", err);
+      console.error("❌ Failed to fetch analysis", err);
+      if (attempts < MAX_POLL_ATTEMPTS) {
+        setTimeout(() => fetchAnalysis(docId), 5000);
+      }
+    } finally {
+      fetchingRef.current.delete(docId);
     }
   };
 
@@ -357,9 +380,13 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         <AlertTriangle className="w-4 h-4 text-destructive" />{" "}
                         Failed
                       </>
+                    ) : analysisData?.status === "processing" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> AI Pipeline Running…
+                      </>
                     ) : (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Processing
+                        <Loader2 className="w-4 h-4 animate-spin" /> Queued
                       </>
                     )}
                   </p>
@@ -680,8 +707,23 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                                         : "bg-secondary text-secondary-foreground rounded-tl-sm"
                                     }`}
                                   >
-                                    <div className="whitespace-pre-line break-words">
-                                      {renderTextWithLinks(msg.text)}
+                                    <div className="whitespace-pre-line break-words leading-relaxed">
+                                      {msg.role === "assistant"
+                                        ? renderTextWithLinks(
+                                            msg.text
+                                              // strip bold/italic markdown: **text** or ***text***
+                                              .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
+                                              // strip heading hashes
+                                              .replace(/^#{1,4}\s+/gm, "")
+                                              // replace leading + bullets with clean dash
+                                              .replace(/^\+\s+/gm, "- ")
+                                              // strip backticks
+                                              .replace(/`+/g, "")
+                                              // collapse 3+ blank lines to 2
+                                              .replace(/\n{3,}/g, "\n\n")
+                                              .trim()
+                                          )
+                                        : renderTextWithLinks(msg.text)}
                                     </div>
                                   </div>
                                 </div>

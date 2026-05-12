@@ -108,27 +108,29 @@ cd documind
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (Vite is fixed to port 8000)
 npm run dev
 ```
 
-The application will be available at **`http://localhost:5173`**
+The application will be available at **`http://localhost:8000`**
+
+Set **`VITE_API_BASE_URL=http://localhost:8001/api/v1`** for local API calls (see `.env.example` and `.env.development`).
 
 #### Backend Setup (Windows PowerShell)
 
+From the `backend` folder, use a virtualenv and run Uvicorn on **port 8001** so the frontend (8000) and API (8001) match Google OAuth / JS origin configuration:
+
 ```powershell
 cd backend
-.\run_backend_no_docker.ps1 -Reload
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-The API will be available at **`http://localhost:8000`**
+The API will be available at **`http://localhost:8001`** (OpenAPI docs: **`http://localhost:8001/docs`**, health: **`http://localhost:8001/health`**).
 
-**What this script does:**
-
-- ✅ Creates Python virtual environment (`.venv`)
-- ✅ Installs all backend dependencies
-- ✅ Automatically uses SQLite for local development
-- ✅ Starts FastAPI server with auto-reload
+CORS allows **`http://localhost:8000`** and **`http://127.0.0.1:8000`** by default. Override with the **`ALLOWED_ORIGINS`** environment variable (comma-separated list) if needed.
 
 ---
 
@@ -197,7 +199,7 @@ documind/
 ### Development Commands
 
 ```bash
-npm run dev              # 🚀 Start dev server (port 5173)
+npm run dev              # 🚀 Start dev server (port 8000)
 npm run build            # 📦 Production build
 npm run build:dev        # 📦 Development build
 npm run preview          # 👁️  Preview production build

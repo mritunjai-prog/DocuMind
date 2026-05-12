@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/apiBase";
 import {
   TrendingUp,
   Clock,
@@ -10,9 +11,6 @@ import {
   MessageSquare,
   RefreshCw,
 } from "lucide-react";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
 const metrics = [
   {
@@ -61,16 +59,18 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
   const [documents, setDocuments] = useState<any[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
-  
   const handleDownload = async (docId: string, filename: string) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/documents/${docId}/download`, {
-        responseType: 'blob'
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/documents/${docId}/download`,
+        {
+          responseType: "blob",
+        },
+      );
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', filename);
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -84,7 +84,9 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
     const userId = localStorage.getItem("user_id") || "guest_user";
     try {
       setLoadingDocs(true);
-      const response = await axios.delete(`${API_BASE_URL}/documents/duplicates?user_id=${encodeURIComponent(userId)}`);
+      const response = await axios.delete(
+        `${API_BASE_URL}/documents/duplicates?user_id=${encodeURIComponent(userId)}`,
+      );
       alert(response.data.message || "Duplicates removed");
       await fetchDocuments();
     } catch (error) {
@@ -98,9 +100,11 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
     setLoadingDocs(true);
     try {
       const userId = localStorage.getItem("user_id") || "guest_user";
+      console.log("🔍 DEBUG: API_BASE_URL=", API_BASE_URL, "userId=", userId);
       const res = await axios.get(
-        `${API_BASE_URL}/documents?user_id=${encodeURIComponent(userId)}`
+        `${API_BASE_URL}/documents?user_id=${encodeURIComponent(userId)}`,
       );
+      console.log("✓ Successfully fetched documents:", res.data);
       setDocuments(res.data);
     } catch (error) {
       console.error("Failed to fetch documents", error);
@@ -202,7 +206,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                 ({documents.length} processed)
               </span>
             </h3>
-            
+
             <div className="flex gap-4">
               <button
                 onClick={handleRemoveDuplicates}
@@ -212,14 +216,14 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
               </button>
               <button
                 onClick={fetchDocuments}
-              disabled={loadingDocs}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${loadingDocs ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </button>
+                disabled={loadingDocs}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${loadingDocs ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </button>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -278,7 +282,12 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         {doc.status !== "processing" ? (
                           <>
-                            <button onClick={() => handleDownload(doc.id, doc.filename)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-medium transition-colors">
+                            <button
+                              onClick={() =>
+                                handleDownload(doc.id, doc.filename)
+                              }
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-medium transition-colors"
+                            >
                               <Download className="w-3.5 h-3.5" />
                               Download
                             </button>

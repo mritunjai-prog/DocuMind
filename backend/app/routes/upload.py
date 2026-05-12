@@ -26,6 +26,13 @@ def background_process_document(doc_id: str, file_path: str):
 
     db = SessionLocal()
     try:
+        # ── Mark as processing immediately so the frontend stops seeing "uploaded" ──
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if doc:
+            doc.status = "processing"
+            db.commit()
+            print(f"Status set to 'processing' for {doc_id}")
+
         success = DocumentRAG.process_document_into_rag(doc_id, file_path)
         analysis = DocumentRAG.analyze_document(doc_id)
 

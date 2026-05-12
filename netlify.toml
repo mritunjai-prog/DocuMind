@@ -9,7 +9,7 @@
 
 [dev]
   command = "npm run dev"
-  port = 8080
+  port = 8000
   publish = "dist"
 
 # Environment variables should be set in Netlify dashboard:

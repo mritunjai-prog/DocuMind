@@ -21,6 +21,21 @@ const Workspace = () => {
   const previousSessionId = useRef<string | null>(null);
 
   useEffect(() => {
+    // Development mode bypass - allow local testing without auth
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocalhost && !localStorage.getItem("user_id")) {
+      console.log(
+        "🔧 Development mode: Setting test user credentials for localhost",
+      );
+      localStorage.setItem("user_id", "dev_test_user");
+      localStorage.setItem("user_token", "dev_test_token");
+      setLoading(false);
+      window.dispatchEvent(new Event("storage"));
+      return;
+    }
+
     // Process Supabase OAuth and save session using the reliable auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
