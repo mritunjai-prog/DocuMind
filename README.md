@@ -49,6 +49,17 @@ Whether you're processing invoices, contracts, receipts, medical records, or com
 
 ---
 
+## 🎉 Latest Updates (May 2026)
+
+We are constantly improving DocuMind to deliver the best performance and accuracy! Here are our most recent platform enhancements:
+
+- 🚀 **RAG Service Migration**: Successfully migrated our Retrieval-Augmented Generation (RAG) system to **Groq (Meta Llama 3)**, unlocking ultra-fast, low-latency inference for document Q&A.
+- 🧠 **Robust Embeddings**: Integrated **HuggingFace** embeddings for superior semantic search, improving context retrieval accuracy across complex documents.
+- 🎓 **Advanced Academic Extraction**: Upgraded our Named Entity Recognition logic to reliably parse and validate academic metrics, specifically **CGPA**, from resumes and transcripts.
+- 🛠️ **Pipeline Optimization**: Enhanced RAG pipeline status polling and enforced strict plain-text generation rules for cleaner, highly professional AI outputs.
+
+---
+
 ## 🏗️ Technology Stack
 
 ### 🎨 Frontend Architecture
@@ -82,8 +93,8 @@ Whether you're processing invoices, contracts, receipts, medical records, or com
 | **NLP**        | Transformers (BERT, LayoutLM) | Document understanding              |
 | **NER**        | SpaCy                         | Entity extraction                   |
 | **RAG**        | LangChain                     | Orchestrated retrieval & generation |
-| **LLMs**       | OpenAI/Anthropic              | Advanced language understanding     |
-| **Embeddings** | Sentence Transformers         | Semantic search capabilities        |
+| **LLMs**       | Groq (Llama 3) / OpenAI       | Advanced language understanding     |
+| **Embeddings** | HuggingFace / Sentence Trans. | Semantic search capabilities        |
 
 ---
 
@@ -240,7 +251,8 @@ npm run lint             # 🔍 Run ESLint
 - ✅ OCR Pipeline with Tesseract & image preprocessing
 - ✅ Document classification (DistilBERT/LayoutLM support)
 - ✅ Named Entity Recognition (SpaCy integration)
-- ✅ RAG System (LangChain + Google Gemini)
+- ✅ Advanced Extraction (CGPA & Academic metrics logic)
+- ✅ RAG System (LangChain + Groq/Meta Llama 3 + HuggingFace)
 - ✅ Vector database (FAISS)
 - ✅ Semantic search & Q&A chatbot
 - ✅ Anomaly detection engine
@@ -316,9 +328,10 @@ Experience DocuMind in action:
 #### 💬 RAG System (Retrieval-Augmented Generation)
 
 - **LangChain Framework** - Orchestration engine
-- **Google Gemini LLM** - Advanced language understanding
+- **Groq & Meta Llama 3 LLM** - Ultra-fast, advanced language understanding
+- **HuggingFace Embeddings** - Superior semantic representation
 - **FAISS Vector Store** - Semantic search (100K+ vectors)
-- **Chat Sessions** - Context-aware Q&A
+- **Chat Sessions** - Context-aware Q&A with strict professional formatting
 - **URL Extraction** - Automatic link normalization
 
 #### ✅ Validation & Quality Assurance
