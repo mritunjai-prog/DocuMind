@@ -22,10 +22,23 @@ class DocumentValidator:
                 extracted_data[label] = []
             extracted_data[label].append(text)
 
+        # Build prefix-tolerant lookup so "AMOUNTS" matches "AMOUNT", etc.
+        def _has_label(prefix: str) -> bool:
+            prefix_up = prefix.upper()
+            return any(k.startswith(prefix_up) for k in extracted_data)
+
+        def _get_label_values(prefix: str) -> list:
+            prefix_up = prefix.upper()
+            result = []
+            for k, v in extracted_data.items():
+                if k.startswith(prefix_up):
+                    result.extend(v)
+            return result
+
         # 1. Document Type Rules
         if document_type.upper() == "INVOICE":
             # Check for missing required fields
-            if "AMOUNT" not in extracted_data and "TOTAL" not in extracted_data:
+            if not _has_label("AMOUNT") and not _has_label("TOTAL"):
                 anomalies.append(
                     {
                         "severity": "high",
@@ -35,9 +48,7 @@ class DocumentValidator:
                 )
 
             # Pattern Validation / Statistical Amount Checks
-            for amount in extracted_data.get("AMOUNT", []) + extracted_data.get(
-                "TOTAL", []
-            ):
+            for amount in _get_label_values("AMOUNT") + _get_label_values("TOTAL"):
                 clean_amount = re.sub(r"[^\d.]", "", amount)
                 try:
                     val = float(clean_amount)
@@ -61,7 +72,7 @@ class DocumentValidator:
                     )
 
         elif document_type.upper() == "CONTRACT":
-            if "DATE" not in extracted_data and "EFFECTIVE_DATE" not in extracted_data:
+            if not _has_label("DATE") and not _has_label("EFFECTIVE_DATE"):
                 anomalies.append(
                     {
                         "severity": "low",

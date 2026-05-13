@@ -441,6 +441,20 @@ class DocumentRAG:
                     metadata={"source": file_path},
                 )
             ]
+        elif file_path.lower().endswith(".docx"):
+            from langchain_community.document_loaders import Docx2txtLoader
+            print(f"Word document detected: {file_path}")
+            try:
+                loader = Docx2txtLoader(file_path)
+                docs = loader.load()
+            except Exception as e:
+                print(f"Error loading docx: {e}")
+                docs = [
+                    Document(
+                        page_content="Could not read this docx file locally.",
+                        metadata={"source": file_path},
+                    )
+                ]
         else:
             loader = TextLoader(file_path, encoding="utf-8")
             try:
