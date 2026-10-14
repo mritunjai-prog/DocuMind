@@ -6,12 +6,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use SQLite for extreme local testing without docker
-DATABASE_URL = (
+# Normalize DATABASE_URL for SQLAlchemy 2.0 driver compatibility
+raw_db_url = (
     os.getenv("DATABASE_URL")
     or os.getenv("DATABASE_URI")
     or "sqlite:///./local_test.db"
 )
+
+if raw_db_url.startswith("postgres://"):
+    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+elif raw_db_url.startswith("postgresql://") and not raw_db_url.startswith("postgresql+"):
+    DATABASE_URL = raw_db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+else:
+    DATABASE_URL = raw_db_url
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
