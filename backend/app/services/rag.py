@@ -194,9 +194,11 @@ def _load_pdf_documents_with_links(file_path: str):
 def _chat_model_candidates() -> List[str]:
     configured_model = os.getenv("GROQ_CHAT_MODEL", "").strip()
     defaults = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
-        "mixtral-8x7b-32768",
     ]
 
     ordered = [configured_model] + defaults if configured_model else defaults
@@ -216,7 +218,17 @@ def _is_rate_limited_error(err: Exception) -> bool:
 
 def _is_not_found_error(err: Exception) -> bool:
     message = str(err)
-    return "404" in message or "NOT_FOUND" in message
+    return any(
+        token in message
+        for token in [
+            "404",
+            "NOT_FOUND",
+            "model_not_found",
+            "model_decommissioned",
+            "decommissioned",
+            "does not exist",
+        ]
+    )
 
 
 def _invoke_chat_with_fallback(
@@ -497,7 +509,10 @@ class DocumentRAG:
     def _reload_document_if_exists(document_id: str) -> bool:
         """Try to reload a document from storage if it exists in the database."""
         try:
-            from app.core.database import get_document_by_id
+            try:
+                from ..core.database import get_document_by_id
+            except (ImportError, ValueError):
+                from app.core.database import get_document_by_id
             
             # Get document info from database
             doc = get_document_by_id(document_id)

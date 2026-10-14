@@ -26,3 +26,24 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def get_document_by_id(doc_id: str):
+    from ..models.document import Document
+
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == doc_id).first()
+        if not doc:
+            return None
+        return {
+            "id": doc.id,
+            "filename": doc.filename,
+            "file_path": doc.file_path,
+            "status": doc.status,
+            "extracted_text": doc.extracted_text,
+            "summary": doc.summary,
+        }
+    finally:
+        db.close()
+
